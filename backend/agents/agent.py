@@ -201,40 +201,13 @@ class OpenAIAgent:
                             messages.append(tool_msg)
                             self._add_to_history(tool_msg)
                             
-                            # Gérer les résultats spécifiques aux outils
-                            if tool_name == "terminal_command":
-                                # Créer un message détaillé pour les commandes terminal
-                                detail_msg = ""
-                                if result["success"]:
-                                    detail_msg = f"Commande exécutée avec succès: {result['command_executed']}\n"
-                                    if result.get("file_created"):
-                                        detail_msg += f"Fichier créé: {result['file_created']}\n"
-                                        if result.get("file_content"):
-                                            detail_msg += f"Contenu du fichier:\n{result['file_content']}"
-                                else:
-                                    detail_msg = f"Erreur lors de l'exécution de la commande: {result['error']}"
-
-                                response_msg = Message(
-                                    role="assistant",
-                                    content=detail_msg
-                                )
-                                messages.append(response_msg)
-                                self._add_to_history(response_msg)
-
-                            elif tool_name == "calculator":
-                                response_msg = Message(
-                                    role="assistant",
-                                    content=f"Le résultat du calcul est {result['result']}"
-                                )
-                                messages.append(response_msg)
-                                self._add_to_history(response_msg)
-                            
-                            elif tool_name == "stop":
-                                # Si c'est un appel direct à stop, sortir de la boucle
+                            if tool_name == "return":
+                                # Si c'est un appel direct à return, sortir de la boucle
                                 return {
                                     "steps_taken": step,
                                     "conversation": self.conversation_history,
                                     "tool_calls": self.tool_calls_history
+                                    "result": result
                                 }
                             
                         except Exception as e:
