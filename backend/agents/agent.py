@@ -5,6 +5,7 @@ import json
 import logging
 from openai import OpenAI
 from tools.base_tool import BaseTool, ToolParameter, ParameterType
+from agents.system_prompt import system_prompt
 
 @dataclass
 class Message:
@@ -26,7 +27,7 @@ class OpenAIAgent:
         name: str,
         tools: List[Any],
         api_key: str,
-        model: str = "gpt-4o-mini",
+        model: str = "gemini-2.0-flash",
         max_history: int = 1000,
         temperature: float = 0.7,
         on_message: Optional[Callable[[Message], None]] = None,
@@ -38,8 +39,11 @@ class OpenAIAgent:
         self.conversation_history: List[Message] = []
         self.tool_calls_history: List[ToolCall] = []
         
-        # Configuration OpenAI
-        self.client = OpenAI(api_key=api_key)
+        # Configuration Gemini
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
         self.model = model
         self.temperature = temperature
         
@@ -114,11 +118,7 @@ class OpenAIAgent:
         # Message initial avec instructions simplifiées
         system_message = Message(
             role="system",
-            content="""Tu es un assistant capable d'utiliser des outils pour accomplir des tâches.
-            Utilise les outils à ta disposition autant que nécessaire pour accomplir la tâche demandée.
-            Entre chaque étape, tu dois m'expliquer tres brievement ce que tu vas faire.
-            IMPORTANT : Apres avoir fini tes tâches, tu dois terminer la conversation en utilisant l'outil 'stop'.
-            """)
+            content=system_prompt)
         
         user_message = Message(
             role="user",

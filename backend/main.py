@@ -1,5 +1,8 @@
 from agents.agent import OpenAIAgent
-from tools.calculator import CalculatorTool
+from tools.hotel import HotelTool
+from tools.maps import MapsTool
+from tools.final_return import ReturnTool
+
 import os
 from colorama import init, Fore, Style
 
@@ -16,19 +19,14 @@ def on_tool_use(tool_call):
 
 # Initialisation de l'agent
 agent = OpenAIAgent(
-    name="mon_agent",
+    name="Road trip planner",
     tools=[
-        CalculatorTool(),
-        StopTool(),
-        TerminalTool(),
-        FileTreeTool(),
-        FileReaderTool(),
-        PythonExecutorTool(),
-        FileWriterTool(),
-        UserInputTool()
+        HotelTool(),
+        MapsTool(),
+        ReturnTool()
     ],
-    api_key=os.environ["OPENAI_API_KEY"],
-    model="gpt-4o",
+    api_key=os.environ["GOOGLE_API_KEY"],
+    model="gemini-1.5-turbo",
     on_message=on_message,
     on_tool_use=on_tool_use
 )

@@ -2,8 +2,15 @@ from tools.base_tool import BaseTool
 from tools.base_tool import ToolParameter
 from tools.base_tool import ParameterType
 from typing import List, Dict, Any
+import requests
+import json
+import os
+from dotenv import load_dotenv
 
-class CalculatorTool(BaseTool):
+# Load environment variables
+load_dotenv()
+
+class HotelTool(BaseTool):
     def __init__(self):
         super().__init__(
             name="hotel searcher",
@@ -31,6 +38,26 @@ class CalculatorTool(BaseTool):
         try:
             location = kwargs["location"]
             nb_results = int(kwargs.get("nb_results", 5))
+            url = "https://places.googleapis.com/v1/places:searchNearby"
+
+            payload = {
+                "includedTypes": ["restaurant"],  # Can be changed to other types
+                "maxResultCount": 3,
+                "locationRestriction": {
+                    "circle": {
+                        "center": {"latitude": 48.8566, "longitude": 2.3522},  # Paris coordinates
+                        "radius": 500.0  # Radius in meters
+                    }
+                }
+            }
+
+            headers = {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": os.getenv('GOOGLE_API_KEY'),
+                "X-Goog-FieldMask": "places.displayName,places.formattedAddress"  # Specify needed fields
+            }
+
+
 
             #TODO: Rechercher les hôtels
 
