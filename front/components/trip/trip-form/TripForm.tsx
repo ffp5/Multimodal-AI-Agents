@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -25,6 +25,7 @@ import {
 } from "@/hooks/state/tripsStore";
 import { isNewTrip } from "@/lib/isNewTrip";
 import { TripReportDialog } from "../trip-report/TripReportDialog";
+import { cx } from "class-variance-authority";
 
 // Derive our form values type from the zod schema.
 type TripValues = z.infer<typeof formSchema>;
@@ -131,8 +132,8 @@ export function TripForm() {
 
 						// Update assistant status if the chunk is an assistant message.
 						if (
-							chunk.type === "message" &&
-							chunk.data.role === "assistant"
+							chunk.type === "message" // &&
+							// chunk.data.role === "assistant"
 						) {
 							setAssistantStatus(chunk.data.content);
 						}
@@ -199,7 +200,8 @@ export function TripForm() {
 			}
 		},
 		onError: (error) => {
-			console.error("Error during stream:", error.message);
+			toast("Error during planning trip!");
+			console.error(error);
 			// Clear the assistant status if there's an error.
 			setAssistantStatus("");
 		},

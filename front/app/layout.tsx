@@ -3,6 +3,7 @@ import "./globals.css";
 import { Suspense, type ReactNode } from "react";
 import StytchProvider from "@/components/StytchProvider";
 import QueryClientContextProvider from "./QueryClientContextProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
 	return (
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 						<Suspense fallback={<div>Loading...</div>}>
 							<main>{children}</main>
 						</Suspense>
+						<Toaster />
 					</body>
 				</html>
 			</QueryClientContextProvider>
