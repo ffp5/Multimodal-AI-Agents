@@ -5,7 +5,7 @@ import json, os
 import logging
 from openai import OpenAI
 from backend.tools.base_tool import BaseTool, ToolParameter, ParameterType
-from backend.agents.system_prompt import system_prompt
+from backend.agents.system_prompt import system_prompt_road_trip_planner
 
 @dataclass
 class Message:
@@ -28,21 +28,20 @@ class OpenAIAgent:
         tools: List[Any],
         api_key: str,
         model: str = "gemini-2.0-flash",
-        max_history: int = 1000,
+        base_url: str = "https://api.openai.com/v1",
         temperature: float = 0.7,
         on_message: Optional[Callable[[Message], None]] = None,
         on_tool_use: Optional[Callable[[ToolCall], None]] = None
     ):
         self.name = name
         self.tools = {tool.name: tool for tool in tools}
-        self.max_history = max_history
         self.conversation_history: List[Message] = []
         self.tool_calls_history: List[ToolCall] = []
         
         # Configuration Gemini
         self.client = OpenAI(
             api_key=api_key,
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+            base_url=base_url
         )
         self.model = model
         self.temperature = temperature
@@ -51,9 +50,19 @@ class OpenAIAgent:
         self.on_message = on_message
         self.on_tool_use = on_tool_use
         
-        # Configuration du logging
+        # Configuration du logging améliorée
         self.logger = logging.getLogger(f"agent.{name}")
         self.logger.setLevel(logging.INFO)
+        
+        # Ajout d'un handler console si aucun n'existe
+        if not self.logger.handlers:
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            self.logger.addHandler(console_handler)
+        
+        self.logger.debug(f"Agent {name} initialisé avec le modèle {model}")
 
     def _create_tools_description(self) -> List[Dict[str, Any]]:
         """Crée la description des outils pour l'API OpenAI"""
@@ -102,8 +111,6 @@ class OpenAIAgent:
     def _add_to_history(self, message: Message):
         """Ajoute un message à l'historique"""
         self.conversation_history.append(message)
-        if len(self.conversation_history) > self.max_history:
-            self.conversation_history.pop(0)
         
         if self.on_message:
             self.on_message(message)
@@ -112,13 +119,13 @@ class OpenAIAgent:
         """Retourne le schéma des outils au format OpenAI"""
         return [tool.get_schema() for tool in self.tools]
 
-    def execute_task(self, task_description: str, max_steps: int = 10) -> Dict[str, Any]:
-        self.logger.info(f"Démarrage de la tâche: {task_description}")
+    def execute_task(self, task_description: str, max_steps: int = 3) -> Dict[str, Any]:
+        self.logger.debug(f"Démarrage de la tâche: {task_description}")
         
         # Message initial avec instructions simplifiées
         system_message = Message(
             role="system",
-            content=system_prompt)
+            content=system_prompt_road_trip_planner)
         
         user_message = Message(
             role="user",
@@ -132,7 +139,7 @@ class OpenAIAgent:
         step = 0
         while step < max_steps:
             step += 1
-            self.logger.info(f"Étape {step}/{max_steps}")
+            self.logger.debug(f"Étape {step}/{max_steps}")
             
             try:
                 # Création du message pour l'API
@@ -154,44 +161,31 @@ class OpenAIAgent:
                     tool_choice="auto",
                     temperature=self.temperature
                 )
-                
+
                 # Traitement de la réponse
                 assistant_message = response.choices[0].message
                 
                 # Créer le message de l'assistant avec son contenu explicatif
-                if assistant_message.content:
-                    explain_msg = Message(
-                        role="assistant",
-                        content=assistant_message.content
-                    )
-                    messages.append(explain_msg)
-                    self._add_to_history(explain_msg)
-                
-                # Gestion des appels d'outils si présents
                 if assistant_message.tool_calls:
+
                     for tool_call in assistant_message.tool_calls:
                         tool_name = tool_call.function.name
                         tool_args = json.loads(tool_call.function.arguments)
-                        
-                        # Afficher le message de contexte pour l'utilisation de l'outil
-                        if self.on_message:
-                            context_msg = Message(
-                                role="tool_context",
-                                content=f"Je vais utiliser l'outil {tool_name} avec les paramètres : {tool_args}"
-                            )
-                            self._add_to_history(context_msg)
-                        
+                        context_msg = Message(
+                            role="tool_context",
+                            content=f"Utilisation de l'outil {tool_name}"
+                        )
+                        self._add_to_history(context_msg)
+
                         tool_call_record = ToolCall(
                             tool_name=tool_name,
                             parameters=tool_args
                         )
-                        
+
                         try:
-                            # Exécution de l'outil
                             result = self.tools[tool_name].execute(**tool_args)
                             tool_call_record.response = result
-                            
-                            # Ajout du message avec l'appel d'outil et sa réponse
+
                             tool_msg = Message(
                                 role="function",
                                 content=json.dumps(result),
@@ -200,25 +194,26 @@ class OpenAIAgent:
                             )
                             messages.append(tool_msg)
                             self._add_to_history(tool_msg)
-                            
+
+                            # Optionnel: vérifier si l'outil "return" doit interrompre la boucle
                             if tool_name == "return":
-                                # Si c'est un appel direct à return, sortir de la boucle
                                 return {
                                     "steps_taken": step,
                                     "conversation": self.conversation_history,
                                     "tool_calls": self.tool_calls_history,
                                     "result": result
                                 }
-                            
+
                         except Exception as e:
                             error_msg = str(e)
                             tool_call_record.error = error_msg
                             self.logger.error(f"Erreur d'exécution de l'outil: {error_msg}")
-                        
+
                         if self.on_tool_use:
                             self.on_tool_use(tool_call_record)
-                        
                         self.tool_calls_history.append(tool_call_record)
+
+
                 
                 # La vérification de fin de tâche n'est plus nécessaire ici
                 # car nous retournons directement après stop

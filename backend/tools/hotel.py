@@ -13,7 +13,7 @@ load_dotenv()
 class HotelTool(BaseTool):
     def __init__(self):
         super().__init__(
-            name="hotel searcher",
+            name="hotel_searcher",
             description="Recherche d'hôtels sur Booking.com et renvoie les n premiers résultats",
         )
 
@@ -53,14 +53,14 @@ class HotelTool(BaseTool):
             response = requests.post(url, headers=headers, data=json.dumps(payload))
             response.raise_for_status()
             location_data = response.json()
-            print(f"Location search response: {json.dumps(location_data, indent=2)}")
+            #print(f"Location search response: {json.dumps(location_data, indent=2)}")
 
             if not location_data.get('places'):
                 return {"error": "No places found for this location"}
             
             latitude = location_data['places'][0]['location']['latitude']
             longitude = location_data['places'][0]['location']['longitude']
-            print(f"Using coordinates: lat={latitude}, long={longitude}")
+            #print(f"Using coordinates: lat={latitude}, long={longitude}")
 
             # Search hotels
             url = "https://places.googleapis.com/v1/places:searchNearby"
@@ -84,7 +84,7 @@ class HotelTool(BaseTool):
                 return {"error": f"Hotel search failed: {response.text}"}
                 
             hotels_data = response.json()
-            print(f"Hotels search response: {json.dumps(hotels_data, indent=2)}")
+            #print(f"Hotels search response: {json.dumps(hotels_data, indent=2)}")
 
             # Format hotels inline: output name, address, and Google Maps link
             formatted_hotels = []
@@ -96,13 +96,29 @@ class HotelTool(BaseTool):
                         "address": place['formattedAddress'],
                         "maps_link": maps_link
                     })
-            return {
-                "result": f"Recherche d'hôtels à {location} (nombre de résultats: {nb_results})",
+            output= {
                 "hotels": formatted_hotels
             }
+            print(f"Réaponse du tool: {output}")
+            return output
+
         except (ValueError, TypeError) as e:
             return {"error": f"Erreur de conversion des nombres: {str(e)}"}
         except Exception as e:
             return {"error": str(e)}
 
+if __name__ == "__main__":
+    # Create an instance of the HotelTool
+    hotel_tool = HotelTool()
 
+    # Define the parameters
+    params = {
+        "location": "Paris",
+        "nb_results": 10
+    }
+
+    # Call the execute method with the parameters
+    result = hotel_tool.execute(**params)
+
+    # #print the result
+    #print(result)

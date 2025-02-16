@@ -1,18 +1,22 @@
 import googlemaps
 from backend.tools.base_tool import BaseTool, ToolParameter, ParameterType
 from typing import List, Dict, Any
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class MapsTool(BaseTool):
     def __init__(self):
         super().__init__(
-            name="maps api",
+            name="maps_api",
             description="Tool that returns distances and travel durations between origins and destinations using the Google Maps API."
         )
 
     def _define_parameters(self) -> List[ToolParameter]:
         return [
             ToolParameter(
-                name="list of locations",
+                name="list_of_locations",
                 param_type=ParameterType.LIST,
                 description="List of locations to calculate distances from the origin",
                 required=True
@@ -24,19 +28,13 @@ class MapsTool(BaseTool):
                 description="Travel mode (e.g., 'driving', 'walking', 'transit', 'bicycling')",
                 required=False,
                 default="driving"
-            ),
-            ToolParameter(
-                name="api_key",
-                param_type=ParameterType.STRING,
-                description="Google Maps API key",
-                required=True
             )
         ]
 
     def execute(self, **kwargs) -> Dict[str, Any]:
         locations = kwargs.get("list_of_locations")  # Changed from "list of locations" to "list_of_locations"
         mode = kwargs.get("mode", "driving")
-        api_key = kwargs.get("api_key")
+        api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
         # Input validation
         if not locations or not api_key:

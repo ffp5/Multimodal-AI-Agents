@@ -1,3 +1,5 @@
+import logging
+
 from backend.agents.agent import OpenAIAgent
 from backend.tools.hotel import HotelTool
 from backend.tools.maps import MapsTool
@@ -7,10 +9,18 @@ import os
 from colorama import init, Fore, Style
 from dotenv import load_dotenv
 
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 load_dotenv()
 
 # Initialisation de colorama
 init()
+
+use_gemini = True
 
 # Création des callbacks
 def on_message(message):
@@ -24,15 +34,16 @@ def on_tool_use(tool_call):
 agent = OpenAIAgent(
     name="Road trip planner",
     tools=[
-        #HotelTool(),
-        #MapsTool(),
+        HotelTool(),
+        MapsTool(),
         ReturnTool()
     ],
-    api_key=os.environ["GOOGLE_API_KEY"],
-    model="gemini-2.0-flash",
+    api_key=os.environ["GEMINI_API_KEY"] if use_gemini else os.environ["API_KEY_OPENAI"],
+    model="gemini-1.5-flash" if use_gemini else "gpt-4o",
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/" if use_gemini else None,
     on_message=on_message,
     on_tool_use=on_tool_use
 )
 
-# Exécution d'une tâche
-result = agent.execute_task("Créer moi un site web en flask.")
+# Exécution d'une tâcxhe
+result = agent.execute_task("Plannifier un road trip de 5 jours en France, en visitant Paris, Lyon et Marseille. Et trouve moi des hôtels pour chaque étape. Utilise les outils si nécessaire.")
