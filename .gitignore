@@ -1,3 +1,8 @@
 /venv
 /.env
-
+# All Python cache files
+__pycache__/
+# All Python egg files
+*.egg
+# All Python egg-info files
+*.egg-info
