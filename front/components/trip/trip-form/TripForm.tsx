@@ -90,7 +90,7 @@ export function TripForm() {
 	// 2. Streaming request function.
 	async function streamTripRequest(data: TripValues) {
 		const response = await fetch(
-			"http://10.20.7.222:5000/plan-trip-stream",
+			"https://multimodal-ai-agents.fly.dev/plan-trip-stream",
 			{
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
