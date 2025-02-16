@@ -107,11 +107,8 @@ class HotelToolOpen(BaseTool):
         # this will only search for images:
         gis.search(search_params=_search_params)
 
-        try:
-            return gis.results()[0].url
-        except:
-            print(gis.results())
-            return ""
+
+        return gis.results()[0].url
 
     def execute(self, **kwargs) -> Dict[str, Any]:
         try:
@@ -129,9 +126,7 @@ class HotelToolOpen(BaseTool):
             # Formater les résultats
             formatted_hotels = []
             for hotel in hotels_data:
-                if hotel.get('display_name', '').split(',') == '':
-                    continue
-                place = hotel.get('display_name', '').split(',')[0]
+                place= place = hotel.get('display_name', '').split(',')[0]
                 url_image = self.get_image_url(place)
                 osm_id = hotel.get('osm_id', '')
                 formatted_hotels.append({
