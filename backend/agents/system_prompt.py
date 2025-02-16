@@ -158,114 +158,117 @@ proposed_dict_output = {
     "version": "1.0"
   }
 }
-# // Common schedule schema for activities that include time information.
-# const ScheduleSchema = z.object({
-# 	start: z.string(), // e.g., "09:00"
-# 	end: z.string(), // e.g., "12:00"
-# });
 
-# // Define an enum for the 20 possible road trip activity types.
-# const OtherActivityType = z.enum([
-# 	"sightseeing",
-# 	"culinary",
-# 	"adventure",
-# 	"hiking",
-# 	"camping",
-# 	"museum",
-# 	"landmark",
-# 	"shopping",
-# 	"local-market",
-# 	"cultural-tour",
-# 	"wildlife",
-# 	"beach",
-# 	"scenic-drive",
-# 	"historical-exploration",
-# 	"photo-op",
-# 	"wine-tasting",
-# 	"gastronomic",
-# 	"local-festival",
-# 	"relaxation",
-# 	"sporting-activities",
-# ]);
+return_instructions = """
+// Common schedule schema for activities that include time information.
+const ScheduleSchema = z.object({
+	start: z.string(), // e.g., "09:00"
+	end: z.string(), // e.g., "12:00"
+});
 
-# // Activity schema for non-car activities.
-# const OtherActivitySchema = z.object({
-# 	type: OtherActivityType, // type is one of the 20 enum values above.
-# 	name: z.string(),
-# 	description: z.string(),
-# 	schedule: ScheduleSchema,
-# });
+// Define an enum for the 20 possible road trip activity types.
+const OtherActivityType = z.enum([
+	"sightseeing",
+	"culinary",
+	"adventure",
+	"hiking",
+	"camping",
+	"museum",
+	"landmark",
+	"shopping",
+	"local-market",
+	"cultural-tour",
+	"wildlife",
+	"beach",
+	"scenic-drive",
+	"historical-exploration",
+	"photo-op",
+	"wine-tasting",
+	"gastronomic",
+	"local-festival",
+	"relaxation",
+	"sporting-activities",
+]);
 
-# // Activity schema for car activities.
-# const CarActivitySchema = z.object({
-# 	type: z.literal("car"),
-# 	description: z.string(),
-# 	mode: z.string(), // Example: "rental", "local transport", etc.
-# 	durationSeconds: z.number(),
-# });
+// Activity schema for non-car activities.
+const OtherActivitySchema = z.object({
+	type: OtherActivityType, // type is one of the 20 enum values above.
+	name: z.string(),
+	description: z.string(),
+	schedule: ScheduleSchema,
+});
 
-# // Union of both activity types.
-# const ActivitySchema = z.union([CarActivitySchema, OtherActivitySchema]);
+// Activity schema for car activities.
+const CarActivitySchema = z.object({
+	type: z.literal("car"),
+	description: z.string(),
+	mode: z.string(), // Example: "rental", "local transport", etc.
+	durationSeconds: z.number(),
+});
 
-# // Hotel schema added to each day.
-# const HotelSchema = z.object({
-# 	name: z.string(),
-# 	address: z.string(),
-# 	stars: z.number(), // Star rating (e.g., 3, 4, 5)
-# 	image: z.string().optional(), // Optional image URL
-# });
+// Union of both activity types.
+const ActivitySchema = z.union([CarActivitySchema, OtherActivitySchema]);
 
-# // Day schema now includes a hotel key and an optional notes field.
-# const DaySchema = z.object({
-# 	dayNumber: z.number(),
-# 	location: z.string(),
-# 	description: z.string(),
-# 	activities: z.array(ActivitySchema),
-# 	hotel: HotelSchema,
-# 	notes: z.string().optional(), // Optional notes for the day
-# });
+// Hotel schema added to each day.
+const HotelSchema = z.object({
+	name: z.string(),
+	address: z.string(),
+	stars: z.number(), // Star rating (e.g., 3, 4, 5)
+	image: z.string().optional(), // Optional image URL
+});
 
-# // Car rental extras schema.
-# const CarRentalExtrasSchema = z.object({
-# 	insuranceIncluded: z.boolean(),
-# 	mileageLimit: z.string(),
-# 	notes: z.string(),
-# });
+// Day schema now includes a hotel key and an optional notes field.
+const DaySchema = z.object({
+	dayNumber: z.number(),
+	location: z.string(),
+	description: z.string(),
+	activities: z.array(ActivitySchema),
+	hotel: HotelSchema,
+	notes: z.string().optional(), // Optional notes for the day
+});
 
-# // Car rental details schema.
-# const CarRentalSchema = z.object({
-# 	company: z.string(),
-# 	pickupLocation: z.string(),
-# 	pickupDateTime: z.string(),
-# 	returnLocation: z.string(),
-# 	returnDateTime: z.string(),
-# 	vehicleType: z.string(),
-# 	dailyRate: z.number(),
-# 	currency: z.string(),
-# 	extras: CarRentalExtrasSchema,
-# });
+// Car rental extras schema.
+const CarRentalExtrasSchema = z.object({
+	insuranceIncluded: z.boolean(),
+	mileageLimit: z.string(),
+	notes: z.string(),
+});
 
-# // Metadata schema.
-# const MetadataSchema = z.object({
-# 	createdDate: z.string(),
-# 	lastUpdated: z.string(),
-# 	version: z.string(),
-# });
+// Car rental details schema.
+const CarRentalSchema = z.object({
+	company: z.string(),
+	pickupLocation: z.string(),
+	pickupDateTime: z.string(),
+	returnLocation: z.string(),
+	returnDateTime: z.string(),
+	vehicleType: z.string(),
+	dailyRate: z.number(),
+	currency: z.string(),
+	extras: CarRentalExtrasSchema,
+});
 
-# // Trip overview schema.
-# const TripOverviewSchema = z.object({
-# 	description: z.string(),
-# 	totalDays: z.number(),
-# 	primaryLanguage: z.string(),
-# 	currency: z.string(),
-# });
+// Metadata schema.
+const MetadataSchema = z.object({
+	createdDate: z.string(),
+	lastUpdated: z.string(),
+	version: z.string(),
+});
 
-# // Main Trip schema.
-# export const TripOutputSchema = z.object({
-# 	tripTitle: z.string(),
-# 	version: z.string(),
-# 	tripOverview: TripOverviewSchema,
-# 	days: z.array(DaySchema),
-# 	carRental: CarRentalSchema,
-# 	metadata: MetadataSchema,
-# });
+// Trip overview schema.
+const TripOverviewSchema = z.object({
+	description: z.string(),
+	totalDays: z.number(),
+	primaryLanguage: z.string(),
+	currency: z.string(),
+});
+
+// Main Trip schema.
+export const TripOutputSchema = z.object({
+	tripTitle: z.string(),
+	version: z.string(),
+	tripOverview: TripOverviewSchema,
+	days: z.array(DaySchema),
+	carRental: CarRentalSchema,
+	metadata: MetadataSchema,
+});
+"""

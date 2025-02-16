@@ -119,22 +119,29 @@ class OpenAIAgent:
         """Retourne le schéma des outils au format OpenAI"""
         return [tool.get_schema() for tool in self.tools]
 
-    def execute_task(self, task_description: str, max_steps: int = 3) -> Dict[str, Any]:
+    def execute_task(self, task_description: str, max_steps: int = 3):
         self.logger.debug(f"Démarrage de la tâche: {task_description}")
         
-        # Message initial avec instructions simplifiées
         system_message = Message(
             role="system",
-            content=system_prompt_road_trip_planner)
-        
+            content=system_prompt_road_trip_planner
+        )
         user_message = Message(
             role="user",
             content=task_description
         )
         
         messages = [system_message, user_message]
-        self._add_to_history(system_message)
-        self._add_to_history(user_message)
+        
+        # Yield initial messages
+        yield {
+            'type': 'message',
+            'data': system_message.__dict__
+        }
+        yield {
+            'type': 'message',
+            'data': user_message.__dict__
+        }
         
         step = 0
         while step < max_steps:
@@ -142,7 +149,6 @@ class OpenAIAgent:
             self.logger.debug(f"Étape {step}/{max_steps}")
             
             try:
-                # Création du message pour l'API
                 api_messages = [
                     {
                         "role": msg.role, 
@@ -153,7 +159,6 @@ class OpenAIAgent:
                     for msg in messages
                 ]
                 
-                # Appel à l'API OpenAI
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=api_messages,
@@ -162,68 +167,67 @@ class OpenAIAgent:
                     temperature=self.temperature
                 )
 
-                # Traitement de la réponse
                 assistant_message = response.choices[0].message
                 
-                # Créer le message de l'assistant avec son contenu explicatif
+                # Yield assistant's response
+                yield {
+                    'type': 'message',
+                    'data': {
+                        'role': 'assistant',
+                        'content': assistant_message.content
+                    }
+                }
+                
                 if assistant_message.tool_calls:
-
                     for tool_call in assistant_message.tool_calls:
                         tool_name = tool_call.function.name
                         tool_args = json.loads(tool_call.function.arguments)
-                        context_msg = Message(
-                            role="tool_context",
-                            content=f"Utilisation de l'outil {tool_name}"
-                        )
-                        self._add_to_history(context_msg)
-
-                        tool_call_record = ToolCall(
-                            tool_name=tool_name,
-                            parameters=tool_args
-                        )
+                        
+                        # Yield tool call event
+                        yield {
+                            'type': 'tool_call',
+                            'data': {
+                                'tool_name': tool_name,
+                                'parameters': tool_args
+                            }
+                        }
 
                         try:
                             result = self.tools[tool_name].execute(**tool_args)
-                            tool_call_record.response = result
-
-                            tool_msg = Message(
-                                role="function",
-                                content=json.dumps(result),
-                                name=tool_name,
-                                tool_call_id=tool_call.id
-                            )
-                            messages.append(tool_msg)
-                            self._add_to_history(tool_msg)
-
-                            # Optionnel: vérifier si l'outil "return" doit interrompre la boucle
-                            if tool_name == "return":
-                                return {
-                                    "steps_taken": step,
-                                    "conversation": self.conversation_history,
-                                    "tool_calls": self.tool_calls_history,
-                                    "result": result
+                            
+                            # Yield tool result
+                            yield {
+                                'type': 'tool_result',
+                                'data': {
+                                    'tool_name': tool_name,
+                                    'result': result
                                 }
+                            }
+
+                            if tool_name == "return":
+                                return
+
+                            messages.append({
+                                "role": "function",
+                                "name": tool_name,
+                                "content": json.dumps(result)
+                            })
 
                         except Exception as e:
-                            error_msg = str(e)
-                            tool_call_record.error = error_msg
-                            self.logger.error(f"Erreur d'exécution de l'outil: {error_msg}")
+                            # Yield error event
+                            yield {
+                                'type': 'error',
+                                'data': {
+                                    'message': str(e)
+                                }
+                            }
+                            raise
 
-                        if self.on_tool_use:
-                            self.on_tool_use(tool_call_record)
-                        self.tool_calls_history.append(tool_call_record)
-
-
-                
-                # La vérification de fin de tâche n'est plus nécessaire ici
-                # car nous retournons directement après stop
-                
             except Exception as e:
-                self.logger.error(f"Erreur lors de l'exécution: {str(e)}")
+                yield {
+                    'type': 'error',
+                    'data': {
+                        'message': str(e)
+                    }
+                }
                 raise
-        
-        return {
-            "steps_taken": step,
-            "conversation": self.conversation_history,
-            "tool_calls": self.tool_calls_history
-        }

@@ -1,4 +1,4 @@
-def osm_to_gmaps(osm_url):
+def convert_osm_to_maps(osm_url):
     """
     Convertit un lien OpenStreetMap en lien Google Maps fonctionnel.
     
@@ -28,5 +28,5 @@ def osm_to_gmaps(osm_url):
 if __name__ == "__main__":
     # Exemple d'utilisation
     osm_link = "https://www.openstreetmap.org/#map=15/48.8584/2.2945"
-    gmaps_link = osm_to_gmaps(osm_link)
+    gmaps_link = convert_osm_to_maps(osm_link)
     print(gmaps_link)

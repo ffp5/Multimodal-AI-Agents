@@ -1,9 +1,8 @@
 from backend.tools.base_tool import BaseTool, ToolParameter, ParameterType
-from backend.agents.system_prompt import dict_output
+from backend.agents.system_prompt import return_instructions
 from backend.utils.convert_osm_to_maps import convert_osm_to_maps
 import json
 
-json_output = json.dumps(dict_output, indent=4, ensure_ascii=False)
 
 class ReturnTool(BaseTool):
     def __init__(self):
@@ -17,7 +16,7 @@ class ReturnTool(BaseTool):
             ToolParameter(
                 name="result",
                 param_type=ParameterType.STRING,
-                description="Retourne les infromations sous ce format Quand tu ne sais pas, met un None:\n\n" + json_output,
+                description="Retourne les infromations sous ce format JSON en respectant ce format:\n\n" + return_instructions,
                 required=True,
             )
         ]
