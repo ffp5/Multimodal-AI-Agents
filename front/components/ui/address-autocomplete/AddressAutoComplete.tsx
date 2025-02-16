@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import type React from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { fetcher } from "@/utils/fetcher";
-import { Loader2, Pencil, Delete } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { AddressType } from "./AutocompleteComponent";
+import type { AddressType } from "./AutocompleteComponent";
 
 export interface AddressAutoCompleteProps {
 	address: AddressType;
@@ -21,16 +20,8 @@ export interface AddressAutoCompleteProps {
 }
 
 export default function AddressAutoComplete(props: AddressAutoCompleteProps) {
-	const {
-		address,
-		setAddress,
-		searchInput,
-		setSearchInput,
-		value,
-		onChange,
-		onBlur,
-		name,
-	} = props;
+	const { setAddress, searchInput, setSearchInput, onChange, onBlur, name } =
+		props;
 
 	// State to track if the user is editing the address.
 	const [isEditing, setIsEditing] = useState(false);
@@ -85,24 +76,24 @@ export default function AddressAutoComplete(props: AddressAutoCompleteProps) {
 		[name, onBlur, onChange, setAddress, setSearchInput],
 	);
 
-	// Handler to clear the current address.
-	const clearAddress = useCallback(() => {
-		setAddress({
-			address1: "",
-			address2: "",
-			formattedAddress: "",
-			city: "",
-			region: "",
-			postalCode: "",
-			country: "",
-			lat: 0,
-			lng: 0,
-		});
-		setSearchInput("");
-		onChange({
-			target: { name, value: "" },
-		} as any);
-	}, [name, onChange, setAddress, setSearchInput]);
+	// // Handler to clear the current address.
+	// const clearAddress = useCallback(() => {
+	// 	setAddress({
+	// 		address1: "",
+	// 		address2: "",
+	// 		formattedAddress: "",
+	// 		city: "",
+	// 		region: "",
+	// 		postalCode: "",
+	// 		country: "",
+	// 		lat: 0,
+	// 		lng: 0,
+	// 	});
+	// 	setSearchInput("");
+	// 	onChange({
+	// 		target: { name, value: "" },
+	// 	} as any);
+	// }, [name, onChange, setAddress, setSearchInput]);
 
 	return (
 		<div className="relative">

@@ -7,7 +7,7 @@ export function isNewTrip(
 ) {
 	// Deep comparison between current and next trips
 	return (
-		JSON.stringify(current?.input) !== JSON.stringify(next) &&
+		JSON.stringify(current?.input) !== JSON.stringify(next) ||
 		!current?.output
 	);
 }

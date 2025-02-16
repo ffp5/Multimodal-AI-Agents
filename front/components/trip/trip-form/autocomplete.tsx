@@ -1,6 +1,7 @@
 "use client";
 
-import React, { type ChangeEventHandler, useState, useEffect } from "react";
+import type React from "react";
+import { type ChangeEventHandler, useState, useEffect } from "react";
 import { useLoadScript } from "@react-google-maps/api";
 import AddressAutoComplete, {
 	type AddressType,

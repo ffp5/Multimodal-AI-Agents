@@ -89,10 +89,7 @@ const GoogleMapsDirections: React.FC = () => {
 
 	// Compute the path (list of locations).
 	const PATH = useMemo(() => {
-		return (
-			currentTrip?.output?.roadTrip.etapes.map((step) => step.region) ??
-			[]
-		);
+		return currentTrip?.output?.days.map((step) => step.location) ?? [];
 	}, [currentTrip]);
 
 	// Prepare the waypoints from PATH (all elements between the first and the last)

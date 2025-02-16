@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -18,12 +18,51 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { AutocompleteComponent } from "@/components/ui/address-autocomplete/AutocompleteComponent";
-import { formSchema, useTripStore } from "@/hooks/state/tripsStore";
+import {
+	formSchema,
+	TripOutputSchema,
+	useTripStore,
+} from "@/hooks/state/tripsStore";
 import { isNewTrip } from "@/lib/isNewTrip";
 import { TripReportDialog } from "../trip-report/TripReportDialog";
 
 // Derive our form values type from the zod schema.
 type TripValues = z.infer<typeof formSchema>;
+// Define a discriminated union type for a chunk:
+type Chunk = MessageChunk | ToolCallChunk | ToolResultChunk | ErrorChunk;
+
+interface MessageChunk {
+	type: "message";
+	data: {
+		role: "system" | "assistant" | "user";
+		content: string;
+		name: string | null;
+		tool_call_id: string | null;
+	};
+}
+
+interface ToolCallChunk {
+	type: "tool_call";
+	data: {
+		tool_name: string;
+		parameters: Record<string, any>;
+	};
+}
+
+interface ToolResultChunk {
+	type: "tool_result";
+	data: {
+		tool_name: string;
+		result: any;
+	};
+}
+
+interface ErrorChunk {
+	type: "error";
+	data: {
+		message: string;
+	};
+}
 
 export function TripForm() {
 	const trips = useTripStore((state) => state.trips);
@@ -32,8 +71,8 @@ export function TripForm() {
 		return trips.find((trip) => trip.id === currentTripId);
 	}, [trips, currentTripId]);
 
-	// Local state for streaming output.
-	const [streamOutput, setStreamOutput] = React.useState<string>("");
+	// Local state for assistant status.
+	const [assistantStatus, setAssistantStatus] = useState("");
 
 	// 1. Define your form.
 	const form = useForm<TripValues>({
@@ -48,13 +87,19 @@ export function TripForm() {
 	const newTrip = isNewTrip(currentTrip, form.getValues());
 
 	// 2. Streaming request function.
-	async function streamTripRequest(data: TripValues): Promise<string> {
-		alert(JSON.stringify(data));
-		const response = await fetch("/api/trip", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(data),
-		});
+	async function streamTripRequest(data: TripValues) {
+		const response = await fetch(
+			"http://10.20.7.222:5000/plan-trip-stream",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					duration: data.days,
+					end_location: data.destination,
+					start_location: data.start,
+				}),
+			},
+		);
 
 		if (!response.ok || !response.body) {
 			throw new Error("Network error");
@@ -62,39 +107,101 @@ export function TripForm() {
 
 		const reader = response.body.getReader();
 		const decoder = new TextDecoder();
-		let result = "";
 
-		// Clear any existing output.
-		setStreamOutput("");
+		// Clear any existing assistant status.
+		setAssistantStatus("");
+
+		let finalChunk: Chunk | null = null;
 
 		// Read stream chunks.
 		while (true) {
 			const { done, value } = await reader.read();
 			if (done) break;
-			const chunk = decoder.decode(value, { stream: true });
-			result += chunk;
-			// Append the chunk to our local streaming output.
-			setStreamOutput((prev) => prev + chunk);
+			const chunkString = decoder.decode(value, { stream: true });
+			// Handle cases where multiple data lines may be present in one chunk.
+			const lines = chunkString.split("\n");
+			for (const line of lines) {
+				if (line.startsWith("data: ")) {
+					try {
+						const parsedData = JSON.parse(
+							line.slice("data: ".length),
+						);
+						const chunk: Chunk = parsedData;
+						finalChunk = chunk;
+
+						// Update assistant status if the chunk is an assistant message.
+						if (
+							chunk.type === "message" &&
+							chunk.data.role === "assistant"
+						) {
+							setAssistantStatus(chunk.data.content);
+						}
+					} catch (error) {
+						console.error("Error parsing stream chunk:", error);
+					}
+				}
+			}
 		}
 
+		// Clear assistant status once the streaming is done.
+		setAssistantStatus("");
+
+		if (!finalChunk) {
+			throw new Error("No data received from stream");
+		}
+
+		const finalData = finalChunk.data;
+		console.log(finalData);
+
+		const result = await TripOutputSchema.parseAsync(finalData);
 		return result;
 	}
 
 	// 3. Use Tanstack Query mutation.
-	const mutation = useMutation<string, Error, TripValues>({
+	const mutation = useMutation<
+		z.infer<typeof TripOutputSchema>,
+		Error,
+		TripValues
+	>({
 		mutationFn: streamTripRequest,
 		onMutate: () => {
-			// Optionally, you can clear the streaming output here or set additional local loading state.
-			setStreamOutput("");
+			// Clear assistant status when starting a new request.
+			setAssistantStatus("");
 		},
 		onSuccess: (data) => {
-			// You can use the final output here.
-			// The streaming output has been built in the state already.
-			console.log("Final output:", data);
+			const tripData = {
+				name: data.tripTitle,
+				input: {
+					start: form.getValues().start,
+					destination: form.getValues().destination,
+					days: form.getValues().days,
+				},
+				loading: false,
+				output: data,
+			};
+
+			if (newTrip) {
+				// Create a new trip with a fresh id.
+				const newTripId = Math.random().toString(36).substring(2, 9);
+				useTripStore.setState((state) => ({
+					trips: [...state.trips, { id: newTripId, ...tripData }],
+					currentTripId: newTripId,
+				}));
+			} else {
+				// Overwrite the existing trip.
+				useTripStore.setState((state) => ({
+					trips: state.trips.map((trip) =>
+						trip.id === currentTripId
+							? { ...trip, ...tripData }
+							: trip,
+					),
+				}));
+			}
 		},
 		onError: (error) => {
-			// Handle errors appropriately.
 			console.error("Error during stream:", error.message);
+			// Clear the assistant status if there's an error.
+			setAssistantStatus("");
 		},
 	});
 
@@ -179,13 +286,11 @@ export function TripForm() {
 
 			{!newTrip && <TripReportDialog />}
 
-			{/* Optionally display the streaming output */}
-			{mutation.isPending && (
-				<div className="mt-4">
-					<h2>Streaming Output:</h2>
-					<pre className="whitespace-pre-wrap bg-gray-100 p-4 rounded">
-						{streamOutput}
-					</pre>
+			{/* Display the assistant's current status if available */}
+			{assistantStatus && (
+				<div className="mt-4 p-4 border border-gray-300 rounded">
+					<h2>Assistant Status:</h2>
+					<p>{assistantStatus}</p>
 				</div>
 			)}
 		</div>
