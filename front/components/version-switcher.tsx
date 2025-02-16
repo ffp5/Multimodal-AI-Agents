@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import React from "react";
 import { Check, ChevronsUpDown, GalleryVerticalEnd } from "lucide-react";
 
 import {
@@ -14,16 +14,27 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useTripStore } from "@/hooks/state/tripsStore";
 
-export function VersionSwitcher({
-	versions,
-	defaultVersion,
-}: {
-	versions: string[];
-	defaultVersion: string;
-}) {
-	const [selectedVersion, setSelectedVersion] =
-		React.useState(defaultVersion);
+export function TripSwitcher() {
+	// Instead of using computed getters from the store,
+	// read the state properties directly.
+	const trips = useTripStore((state) => state.trips);
+	const currentTripId = useTripStore((state) => state.currentTripId);
+	const currentTrip = React.useMemo(() => {
+		return trips.find((trip) => trip.id === currentTripId);
+	}, [trips, currentTripId]);
+
+	// Append the "New Trip" entry inside the component.
+	const tripsWithNew = React.useMemo(() => {
+		const newTrip = {
+			id: "-1",
+			name: "New Trip",
+			input: { start: "", destination: "", days: 1 },
+			loading: false,
+		};
+		return [...trips, newTrip];
+	}, [trips]);
 
 	return (
 		<SidebarMenu>
@@ -39,7 +50,7 @@ export function VersionSwitcher({
 							</div>
 							<div className="flex flex-col gap-0.5 leading-none">
 								<span className="font-semibold">Trips</span>
-								<span className="">{selectedVersion}</span>
+								<span>{currentTrip?.name ?? "New Trip"}</span>
 							</div>
 							<ChevronsUpDown className="ml-auto" />
 						</SidebarMenuButton>
@@ -48,13 +59,20 @@ export function VersionSwitcher({
 						className="w-[--radix-dropdown-menu-trigger-width]"
 						align="start"
 					>
-						{versions.map((version) => (
+						{tripsWithNew.map((trip) => (
 							<DropdownMenuItem
-								key={version}
-								onSelect={() => setSelectedVersion(version)}
+								key={trip.id}
+								onSelect={() => {
+									// Only update if the selected trip is different.
+									if (trip.id !== currentTrip?.id) {
+										useTripStore.setState({
+											currentTripId: trip.id,
+										});
+									}
+								}}
 							>
-								{version}{" "}
-								{version === selectedVersion && (
+								{trip.name}
+								{trip.id === currentTrip?.id && (
 									<Check className="ml-auto" />
 								)}
 							</DropdownMenuItem>
