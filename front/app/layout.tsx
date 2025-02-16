@@ -9,10 +9,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 		<StytchProvider>
 			<QueryClientContextProvider>
 				<html lang="en">
-					<title>Stytch Next.js App Router Example</title>
+					<title>🌍 Trip Planner</title>
 					<meta
 						name="description"
-						content="An example Next.js App Router application using Stytch for authentication"
+						content="AI Agent Hackathon - Trip Planner"
 					/>
 					<body>
 						<Suspense fallback={<div>Loading...</div>}>

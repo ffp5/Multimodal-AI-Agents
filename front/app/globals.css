@@ -208,3 +208,11 @@ p {
 	display: flex;
 	gap: 16px;
 }
+
+.google-maps > div {
+	height: 100% !important;
+}
+
+.google-maps iframe {
+	height: 100%;
+}
