@@ -94,7 +94,9 @@ export default function AddressAutoComplete(props: AddressAutoCompleteProps) {
 			const fetchedAddress = data.data.address as AddressType;
 			setAddress(fetchedAddress);
 			// Notify parent of the new formatted address.
-			props.onChange(fetchedAddress.formattedAddress);
+			props.onChange({
+				target: { value: fetchedAddress.formattedAddress },
+			} as any);
 			props.onBlur();
 		}
 	}, [data, setAddress, props]);
@@ -139,9 +141,11 @@ export default function AddressAutoComplete(props: AddressAutoCompleteProps) {
 									const fetchedAddress = res.data
 										.address as AddressType;
 									setAddress(fetchedAddress);
-									props.onChange(
-										fetchedAddress.formattedAddress,
-									);
+									props.onChange({
+										target: {
+											value: fetchedAddress.formattedAddress,
+										},
+									} as any);
 									props.onBlur();
 									setSearchInput(
 										fetchedAddress.formattedAddress,

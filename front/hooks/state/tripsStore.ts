@@ -13,7 +13,7 @@ export const formSchema = z.object({
 	destination: z.string().min(2, {
 		message: "Please enter a valid destination.",
 	}),
-	days: z
+	days: z.coerce
 		.number({ invalid_type_error: "Number of days is required" })
 		.min(1, {
 			message: "There must be at least 1 day for the trip.",
@@ -53,7 +53,7 @@ const OtherActivityType = z.enum([
 ]);
 
 // Activity schema for non-car activities.
-const OtherActivitySchema = z.object({
+export const OtherActivitySchema = z.object({
 	type: OtherActivityType, // type is one of the 20 enum values above.
 	name: z.string(),
 	description: z.string(),
@@ -152,7 +152,7 @@ interface TripStore {
 
 // Create the Zustand store
 export const useTripStoreBase = create<TripStore>((set, get) => ({
-	trips: mockTrips,
+	trips: [],
 	currentTripId: null,
 }));
 

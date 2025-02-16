@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
 		"route",
 		"street_number",
 		"landmark",
+		// "locality", // Added to allow city-based suggestions such as "Paris" or "Miami"
 	];
 
 	try {
@@ -33,7 +34,8 @@ export async function GET(req: NextRequest) {
 			},
 			body: JSON.stringify({
 				input: input,
-				includedPrimaryTypes: primaryTypes,
+				// includedPrimaryTypes: primaryTypes,
+				// types: "geocode",
 				// Location biased towards the user's country
 				// includedRegionCodes: [country || "US"],
 			}),

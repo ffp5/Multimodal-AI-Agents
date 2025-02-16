@@ -18,7 +18,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { Link } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 
 function gravatar(email: string) {
@@ -33,7 +32,7 @@ function gravatar(email: string) {
 }
 
 export default function Header() {
-	const { user, isInitialized } = useStytchUser();
+	const { user } = useStytchUser();
 	const stytch = useStytch();
 	const trips = useTripStore((state) => state.trips);
 	const currentTripId = useTripStore((state) => state.currentTripId);
