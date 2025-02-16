@@ -30,7 +30,7 @@ def create_streaming_agent():
             ReturnTool()
         ],
         api_key=os.environ["TOGETHER_API_KEY"] if use_together else os.environ["API_KEY_OPENAI"],
-        model="deepseek-ai/DeepSeek-V3" if use_together else "gpt-4o",
+        model="mistralai/Mixtral-8x7B-Instruct-v0.1" if use_together else "gpt-4o",
         base_url="https://api.together.xyz/v1" if use_together else None
     )
 

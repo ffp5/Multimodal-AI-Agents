@@ -13,7 +13,7 @@ class HotelToolOpen(BaseTool):
     def __init__(self):
         super().__init__(
             name="hotel_searcher",
-            description="Recherche d'hôtels sur OpenStreetMap et renvoie les n premiers résultats",
+            description="Search for hotels on OpenStreetMap and return the first n results",
         )
         self.nominatim_endpoint = "https://nominatim.openstreetmap.org"
 
@@ -24,12 +24,6 @@ class HotelToolOpen(BaseTool):
                 param_type=ParameterType.STRING,
                 description="Localisation de l'hôtel, met le nom de la ville et le pays",
                 required=True
-            ),
-            ToolParameter(
-                name="nb_results",
-                param_type=ParameterType.INTEGER,
-                description="Nombre de résultats à renvoyer (par défaut 6)",
-                required=False,
             )
         ]
 
@@ -107,8 +101,10 @@ class HotelToolOpen(BaseTool):
         # this will only search for images:
         gis.search(search_params=_search_params)
 
-
-        return gis.results()[0].url
+        try:
+            return gis.results()[0].url
+        except:
+            return ""
 
     def execute(self, **kwargs) -> Dict[str, Any]:
         try:

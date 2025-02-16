@@ -126,7 +126,7 @@ class OpenAIAgent:
         """Retourne le schéma des outils au format OpenAI"""
         return [tool.get_schema() for tool in self.tools]
 
-    def execute_task(self, task_description: str, max_steps: int = 10):
+    def execute_task(self, task_description: str, max_steps: int = 40):
         self.console.print(Panel(f"[bold blue]New Task[/bold blue]\n{task_description}"))
         
         self.logger.debug(f"Starting task: {task_description}")
