@@ -6,6 +6,7 @@ from backend.tools.maps_openstreetmap import OpenStreetMapTool
 from backend.tools.final_return import ReturnTool
 from backend.config.swagger_config import template, swagger_config
 import os
+import weave
 from dotenv import load_dotenv
 import json
 from flask_cors import CORS
@@ -16,8 +17,9 @@ app = Flask(__name__)
 CORS(app)
 swagger = Swagger(app, template=template, config=swagger_config)
 
+weave.init("roadtrip-planner")
 
-
+@weave.op()
 def create_streaming_agent():
     use_gemini = False
     return OpenAIAgent(
@@ -31,6 +33,12 @@ def create_streaming_agent():
         model="gemini-2.0-flash" if use_gemini else "gpt-4o",
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/" if use_gemini else None
     )
+
+@weave.op()
+def process_trip_request(data):
+    agent = create_streaming_agent()
+    prompt = f"Plan a {data['duration']} day road trip from {data['start_location']} to {data['end_location']}. Find hotels for each stop."
+    return agent.execute_task(prompt)
 
 @app.route('/', methods=['GET'])
 def home():
@@ -87,12 +95,8 @@ def plan_trip_stream():
         return jsonify({'error': 'Duration must be a number'}), 400
 
     def generate():
-        agent = create_streaming_agent()
-        prompt = f"Plan a {duration} day road trip from {data['start_location']} to {data['end_location']}. Find hotels for each stop."
-
-        
         try:
-            for event in agent.execute_task(prompt):
+            for event in process_trip_request(data):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'data': {'message': str(e)}})}\n\n"
