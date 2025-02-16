@@ -7,7 +7,7 @@ system_prompt = """Tu es un assistant capable d'utiliser des outils pour accompl
 system_prompt_road_trip_planner = """Tu es un assistant capable d'utiliser des outils pour accomplir des tâches.
             Utilise les outils à ta disposition autant que nécessaire pour accomplir la tâche demandée.
             Avant chaque étape, tu dois m'expliquer tres brievement ton raisonnement et ce que tu vas faire.
-            Il faut que tu fasses obligatoirement des recherces d'hotels et des estimation de trajet, en utilisant les outils a ta disposition. 
+            Il faut que tu fasses obligatoirement des recherces d'hotels et des estimation de trajet, en utilisant les outils a ta disposition.
             IMPORTANT : Apres avoir fini tes tâches, tu dois terminer la conversation en utilisant l'outil 'return'.
             """
 
@@ -66,5 +66,95 @@ dict_output = {
       "tarifJournalier": 75.50,
       "devise": "EUR"
     }
+  }
+}
+
+
+proposed_dict_output = {
+  "tripTitle": "Road Trip in France",
+  "version": "1.0",
+  "tripOverview": {
+    "description": "An exciting road trip across France visiting iconic landmarks, museums, castles, and vineyards while enjoying comfortable travel.",
+    "totalDays": 2,
+    "primaryLanguage": "English",
+    "currency": "$"
+  },
+  "days": [
+    {
+      "dayNumber": 1,
+      "location": "Paris, France",
+      "description": "Paris is the vibrant capital of France, known for its historical monuments, world-class art museums, gourmet restaurants, and cultural festivals. Start your day with a visit to the Eiffel Tower to enjoy panoramic views, then continue to the Louvre Museum to admire timeless masterpieces.",
+      "activities": [
+        {
+          "type": "sightseeing",
+          "name": "Eiffel Tower Visit",
+          "description": "Explore and enjoy panoramic views from the Eiffel Tower and walk around Champ-de-Mars.",
+          "schedule": {
+            "start": "09:00",
+            "end": "12:00"
+          }
+        },
+        {
+          "type": "museum-visits",
+          "name": "Louvre Museum Guided Tour",
+          "description": "Guided tour through the Louvre to see the key art works and exhibits.",
+          "schedule": {
+            "start": "14:00",
+            "end": "17:00"
+          }
+        },
+        {
+          "type": "transport",
+          "mode": "car",
+          "durationSeconds": 7200,
+          "description": "Local car transportation between different attractions."
+        }
+      ]
+    },
+    {
+      "dayNumber": 2,
+      "location": "Loire Valley, France",
+      "description": "The Loire Valley is famed for its majestic châteaux, scenic landscapes, and renowned vineyards. Begin your day with a visit to the iconic Château de Chambord from the Renaissance era and later enjoy a local wine tasting at a vineyard near Château de Chenonceau.",
+      "activities": [
+        {
+          "type": "sightseeing",
+          "name": "Château de Chambord Visit",
+          "description": "Discover the magnificence of the Renaissance-era castle.",
+          "schedule": {
+            "start": "10:00",
+            "end": "13:00"
+          }
+        },
+        {
+          "type": "culinary",
+          "name": "Vineyard Wine Tasting",
+          "description": "Experience local wines and learn about the winemaking process at a nearby vineyard.",
+          "schedule": {
+            "start": "15:00",
+            "end": "17:00"
+          }
+        }
+      ]
+    }
+  ],
+  "carRental": {
+    "company": "Rent-A-Car France",
+    "pickupLocation": "Charles de Gaulle Airport, Paris",
+    "pickupDateTime": "2025-05-01T08:00:00",
+    "returnLocation": "Charles de Gaulle Airport, Paris",
+    "returnDateTime": "2025-05-10T18:00:00",
+    "vehicleType": "SUV",
+    "dailyRate": 75.50,
+    "currency": "EUR",
+    "extras": {
+      "insuranceIncluded": True,
+      "mileageLimit": "Unlimited",
+      "notes": "Ensure to check fuel policy and local driving rules."
+    }
+  },
+  "metadata": {
+    "createdDate": "2025-02-16T07:15:49Z",
+    "lastUpdated": "2025-04-01T12:00:00Z",
+    "version": "1.0"
   }
 }
