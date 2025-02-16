@@ -7,7 +7,7 @@ system_prompt = """Tu es un assistant capable d'utiliser des outils pour accompl
 system_prompt_road_trip_planner = """Tu es un assistant capable d'utiliser des outils pour accomplir des tâches.
             Utilise les outils à ta disposition autant que nécessaire pour accomplir la tâche demandée.
             Entre chaque étape, tu dois m'expliquer tres brievement ton raisonnement et ce que tu vas faire.
-            IMPORTANT : Apres avoir fini tes tâches, tu dois terminer la conversation en utilisant l'outil 'stop'.
+            IMPORTANT : Apres avoir fini tes tâches, tu dois terminer la conversation en utilisant l'outil 'return'.
             """
 
 json_output = {

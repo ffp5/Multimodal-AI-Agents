@@ -1,6 +1,6 @@
-from tools.base_tool import BaseTool
-from tools.base_tool import ToolParameter
-from tools.base_tool import ParameterType
+from backend.tools.base_tool import BaseTool
+from backend.tools.base_tool import ToolParameter
+from backend.tools.base_tool import ParameterType
 from typing import List, Dict, Any
 
 class CalculatorTool(BaseTool):

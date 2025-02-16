@@ -1,11 +1,11 @@
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
 from datetime import datetime
-import json
+import json, os
 import logging
 from openai import OpenAI
-from tools.base_tool import BaseTool, ToolParameter, ParameterType
-from agents.system_prompt import system_prompt
+from backend.tools.base_tool import BaseTool, ToolParameter, ParameterType
+from backend.agents.system_prompt import system_prompt
 
 @dataclass
 class Message:
@@ -206,7 +206,7 @@ class OpenAIAgent:
                                 return {
                                     "steps_taken": step,
                                     "conversation": self.conversation_history,
-                                    "tool_calls": self.tool_calls_history
+                                    "tool_calls": self.tool_calls_history,
                                     "result": result
                                 }
                             

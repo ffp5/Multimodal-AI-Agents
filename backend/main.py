@@ -1,10 +1,13 @@
-from agents.agent import OpenAIAgent
-from tools.hotel import HotelTool
-from tools.maps import MapsTool
-from tools.final_return import ReturnTool
+from backend.agents.agent import OpenAIAgent
+from backend.tools.hotel import HotelTool
+from backend.tools.maps import MapsTool
+from backend.tools.final_return import ReturnTool
 
 import os
 from colorama import init, Fore, Style
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Initialisation de colorama
 init()
@@ -21,12 +24,12 @@ def on_tool_use(tool_call):
 agent = OpenAIAgent(
     name="Road trip planner",
     tools=[
-        HotelTool(),
-        MapsTool(),
+        #HotelTool(),
+        #MapsTool(),
         ReturnTool()
     ],
     api_key=os.environ["GOOGLE_API_KEY"],
-    model="gemini-1.5-turbo",
+    model="gemini-2.0-flash",
     on_message=on_message,
     on_tool_use=on_tool_use
 )
