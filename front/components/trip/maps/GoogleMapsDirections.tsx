@@ -15,8 +15,8 @@ const containerStyle = { width: "100%", height: "100%" };
 // Define the libraries to load.
 const libraries: "places"[] = ["places"];
 
-// A default/fallback location (example: Oslo)
-const fallbackCenter = { lat: 59.9139, lng: 10.7522 };
+// A default/fallback location (example: SF)
+const fallbackCenter = { lat: 37.7749, lng: -122.4194 };
 
 // Main component.
 const GoogleMapsDirections: React.FC = () => {

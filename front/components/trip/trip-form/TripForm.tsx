@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { AutocompleteComponent } from "@/components/ui/address-autocomplete/AutocompleteComponent";
 import { formSchema, useTripStore } from "@/hooks/state/tripsStore";
 import { isNewTrip } from "@/lib/isNewTrip";
+import { TripReportDialog } from "../trip-report/TripReportDialog";
 
 // Derive our form values type from the zod schema.
 type TripValues = z.infer<typeof formSchema>;
@@ -175,6 +176,8 @@ export function TripForm() {
 					)}
 				</form>
 			</Form>
+
+			{!newTrip && <TripReportDialog />}
 
 			{/* Optionally display the streaming output */}
 			{mutation.isPending && (
