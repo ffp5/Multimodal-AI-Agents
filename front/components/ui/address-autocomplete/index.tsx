@@ -20,7 +20,6 @@ import {
 } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AddressDialog from "./address-dialog";
-
 import { Command as CommandPrimitive } from "cmdk";
 
 export interface AddressType {
@@ -33,6 +32,8 @@ export interface AddressType {
 	country: string;
 	lat: number;
 	lng: number;
+	// Optionally, the API may return a placeId.
+	placeId?: string;
 }
 
 interface AddressAutoCompleteProps {
@@ -48,6 +49,12 @@ interface AddressAutoCompleteProps {
 	onBlur: () => void;
 	name: string;
 	ref: React.Ref<HTMLInputElement>;
+	/**
+	 * When true and value is "", the component will attempt to update
+	 * using current location (reverse geocoding). When false, it will
+	 * clear the address.
+	 */
+	updateWithCurrentLocation?: boolean;
 }
 
 export default function AddressAutoComplete(props: AddressAutoCompleteProps) {
@@ -59,11 +66,19 @@ export default function AddressAutoComplete(props: AddressAutoCompleteProps) {
 		searchInput,
 		setSearchInput,
 		placeholder,
+		updateWithCurrentLocation = false,
 	} = props;
 
+	// Tracks the place id used to fetch details.
 	const [selectedPlaceId, setSelectedPlaceId] = useState("");
+	// Controls the open/close state of the dialog (for detailed view)
 	const [isOpen, setIsOpen] = useState(false);
+	// We only want to auto-fetch current location once per "new trip"
+	const [hasAutoFetched, setHasAutoFetched] = useState(false);
+	// Indicates if the user is actively editing the input.
+	const [isManualEditing, setIsManualEditing] = useState(false);
 
+	// Query for fetching address details using selectedPlaceId.
 	const { data, isLoading } = useQuery({
 		queryKey: ["place", selectedPlaceId],
 		queryFn: () => fetcher(`/api/address/place?placeId=${selectedPlaceId}`),
@@ -71,19 +86,123 @@ export default function AddressAutoComplete(props: AddressAutoCompleteProps) {
 		refetchOnWindowFocus: false,
 	});
 
-	const adrAddress = data?.data.adrAddress;
+	const adrAddress = data?.data?.adrAddress;
 
+	// When data is returned from fetching by placeId, update the address state.
 	useEffect(() => {
-		if (data?.data.address) {
-			setAddress(data.data.address as AddressType);
-			props.onChange(data.data.address.formattedAddress);
+		if (data?.data && data.data.address) {
+			const fetchedAddress = data.data.address as AddressType;
+			setAddress(fetchedAddress);
+			// Notify parent of the new formatted address.
+			props.onChange(fetchedAddress.formattedAddress);
 			props.onBlur();
 		}
 	}, [data, setAddress, props]);
 
+	// Helper: clear all address-related state.
+	const clearAddress = () => {
+		setSelectedPlaceId("");
+		setAddress({
+			address1: "",
+			address2: "",
+			formattedAddress: "",
+			city: "",
+			region: "",
+			postalCode: "",
+			country: "",
+			lat: 0,
+			lng: 0,
+		});
+		setSearchInput("");
+	};
+
+	// Effect: handle external value changes.
+	useEffect(() => {
+		if (props.value === "") {
+			// New trip: if auto-update is enabled, we're not editing, and we haven't auto-fetched yet.
+			if (
+				updateWithCurrentLocation &&
+				navigator.geolocation &&
+				!isManualEditing &&
+				!hasAutoFetched
+			) {
+				setHasAutoFetched(true);
+				navigator.geolocation.getCurrentPosition(
+					(position) => {
+						const { latitude, longitude } = position.coords;
+						// Call reverse-geocoding endpoint.
+						fetcher(
+							`/api/address/place?lat=${latitude}&lng=${longitude}`,
+						)
+							.then((res) => {
+								if (res?.data?.address) {
+									const fetchedAddress = res.data
+										.address as AddressType;
+									setAddress(fetchedAddress);
+									props.onChange(
+										fetchedAddress.formattedAddress,
+									);
+									props.onBlur();
+									setSearchInput(
+										fetchedAddress.formattedAddress,
+									);
+									if (fetchedAddress.placeId) {
+										setSelectedPlaceId(
+											fetchedAddress.placeId,
+										);
+									}
+								} else {
+									clearAddress();
+								}
+							})
+							.catch((error) => {
+								console.error(
+									"Error fetching address by location:",
+									error,
+								);
+								clearAddress();
+							});
+					},
+					(error) => {
+						console.error("Error obtaining geolocation:", error);
+						clearAddress();
+					},
+				);
+			} else {
+				// If we are editing (user typing) or auto-update disabled, just clear.
+				// (But note: if user is typing, we don't want to clear their text.)
+				if (!isManualEditing) {
+					clearAddress();
+				}
+			}
+		} else {
+			// External value is non-empty: if it doesn't match our current address or selectedPlaceId, update.
+			if (
+				props.value &&
+				props.value !== address.formattedAddress &&
+				props.value !== selectedPlaceId
+			) {
+				setSelectedPlaceId(props.value);
+				// Reset auto-fetch flag so that if later we get an empty value, we can try auto-fetch again.
+				setHasAutoFetched(false);
+			}
+		}
+	}, [
+		props.value,
+		address.formattedAddress,
+		selectedPlaceId,
+		updateWithCurrentLocation,
+		isManualEditing,
+		hasAutoFetched,
+		setAddress,
+		setSearchInput,
+		props,
+	]);
+
 	return (
 		<>
-			{selectedPlaceId !== "" || address.formattedAddress ? (
+			{(selectedPlaceId !== "" || address.formattedAddress) &&
+			!isManualEditing ? (
 				<div className="flex items-center gap-2">
 					<Input
 						readOnly
@@ -92,7 +211,6 @@ export default function AddressAutoComplete(props: AddressAutoCompleteProps) {
 						onBlur={props.onBlur}
 						name="address"
 					/>
-
 					<AddressDialog
 						isLoading={isLoading}
 						dialogTitle={dialogTitle}
@@ -113,20 +231,7 @@ export default function AddressAutoComplete(props: AddressAutoCompleteProps) {
 					</AddressDialog>
 					<Button
 						type="reset"
-						onClick={() => {
-							setSelectedPlaceId("");
-							setAddress({
-								address1: "",
-								address2: "",
-								formattedAddress: "",
-								city: "",
-								region: "",
-								postalCode: "",
-								country: "",
-								lat: 0,
-								lng: 0,
-							});
-						}}
+						onClick={clearAddress}
 						size="icon"
 						variant="outline"
 						className="shrink-0"
@@ -143,6 +248,8 @@ export default function AddressAutoComplete(props: AddressAutoCompleteProps) {
 					setIsOpenDialog={setIsOpen}
 					showInlineError={showInlineError}
 					placeholder={placeholder}
+					onStartEditing={() => setIsManualEditing(true)}
+					onStopEditing={() => setIsManualEditing(false)}
 				/>
 			)}
 		</>
@@ -157,6 +264,8 @@ interface CommonProps {
 	searchInput: string;
 	setSearchInput: (searchInput: string) => void;
 	placeholder?: string;
+	onStartEditing: () => void;
+	onStopEditing: () => void;
 }
 
 function AddressAutoCompleteInput(props: CommonProps) {
@@ -168,12 +277,21 @@ function AddressAutoCompleteInput(props: CommonProps) {
 		searchInput,
 		setSearchInput,
 		placeholder,
+		onStartEditing,
+		onStopEditing,
 	} = props;
 
 	const [isOpen, setIsOpen] = useState(false);
 
-	const open = useCallback(() => setIsOpen(true), []);
-	const close = useCallback(() => setIsOpen(false), []);
+	const open = useCallback(() => {
+		setIsOpen(true);
+		onStartEditing();
+	}, [onStartEditing]);
+
+	const close = useCallback(() => {
+		setIsOpen(false);
+		onStopEditing();
+	}, [onStopEditing]);
 
 	const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
 		if (event.key === "Escape") {
@@ -218,7 +336,6 @@ function AddressAutoCompleteInput(props: CommonProps) {
 						messages={["Select a valid address from the list"]}
 					/>
 				)}
-
 			{isOpen && (
 				<div className="relative animate-in fade-in-0 zoom-in-95 h-auto">
 					<CommandList>
@@ -273,7 +390,6 @@ function AddressAutoCompleteInput(props: CommonProps) {
 										)}
 									</>
 								)}
-
 								<CommandEmpty>
 									{!isLoading && predictions.length === 0 && (
 										<div className="py-4 flex items-center justify-center">

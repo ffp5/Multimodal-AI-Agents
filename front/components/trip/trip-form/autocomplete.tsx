@@ -113,7 +113,7 @@ export const AutocompleteComponent = (props: Props) => {
 						setAddress(autoAddress);
 						setSearchInput(autoAddress.formattedAddress);
 						props.onChange({
-							//@ts-expect-error - type
+							// @ts-expect-error - synthetic event shape
 							target: {
 								name: "address",
 								value: autoAddress.formattedAddress,
@@ -148,6 +148,7 @@ export const AutocompleteComponent = (props: Props) => {
 			searchInput={searchInput}
 			setSearchInput={setSearchInput}
 			dialogTitle="Enter Address"
+			updateWithCurrentLocation={automatic} // Pass the flag here
 			{...props}
 		/>
 	);

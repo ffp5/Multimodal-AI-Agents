@@ -1,4 +1,4 @@
-import { getGeolocation } from "@/utils/get-geolocation";
+// import { getGeolocation } from "@/utils/get-geolocation";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 		`http://${req.headers?.get("host")}`,
 	);
 	// Check if your hosting provider gives you the country code
-	const country = await getGeolocation();
+	// const country = await getGeolocation();
 	const input = searchParams.get("input");
 	const url = "https://places.googleapis.com/v1/places:autocomplete";
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 				input: input,
 				includedPrimaryTypes: primaryTypes,
 				// Location biased towards the user's country
-				includedRegionCodes: [country || "US"],
+				// includedRegionCodes: [country || "US"],
 			}),
 		});
 

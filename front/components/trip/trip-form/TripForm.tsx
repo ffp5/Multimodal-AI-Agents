@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -17,28 +17,38 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { AutocompleteComponent } from "./autocomplete";
-import { formSchema } from "@/hooks/state/tripsStore";
+import { AutocompleteComponent } from "@/components/ui/address-autocomplete/AutocompleteComponent";
+import { formSchema, useTripStore } from "@/hooks/state/tripsStore";
+import { isNewTrip } from "@/lib/isNewTrip";
 
 // Derive our form values type from the zod schema.
 type TripValues = z.infer<typeof formSchema>;
 
 export function TripForm() {
+	const trips = useTripStore((state) => state.trips);
+	const currentTripId = useTripStore((state) => state.currentTripId);
+	const currentTrip = useMemo(() => {
+		return trips.find((trip) => trip.id === currentTripId);
+	}, [trips, currentTripId]);
+
 	// Local state for streaming output.
 	const [streamOutput, setStreamOutput] = React.useState<string>("");
 
 	// 1. Define your form.
 	const form = useForm<TripValues>({
 		resolver: zodResolver(formSchema),
-		defaultValues: {
-			start: "",
-			destination: "",
-			days: 1,
+		values: {
+			start: currentTrip?.input.start || "",
+			destination: currentTrip?.input.destination || "",
+			days: currentTrip?.input.days || 1,
 		},
 	});
 
+	const newTrip = isNewTrip(currentTrip, form.getValues());
+
 	// 2. Streaming request function.
 	async function streamTripRequest(data: TripValues): Promise<string> {
+		alert(JSON.stringify(data));
 		const response = await fetch("/api/trip", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -154,9 +164,15 @@ export function TripForm() {
 							</FormItem>
 						)}
 					/>
-					<Button type="submit" disabled={mutation.isPending}>
-						{mutation.isPending ? "Loading…" : "Submit"}
-					</Button>
+					{newTrip && (
+						<Button
+							type="submit"
+							disabled={mutation.isPending}
+							className="w-full"
+						>
+							{mutation.isPending ? "Loading…" : "Plan Trip"}
+						</Button>
+					)}
 				</form>
 			</Form>
 
