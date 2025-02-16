@@ -7,6 +7,10 @@ from openai import OpenAI
 from backend.tools.base_tool import BaseTool, ToolParameter, ParameterType
 from backend.agents.system_prompt import system_prompt_road_trip_planner
 import traceback
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich import print as rprint
 
 @dataclass
 class Message:
@@ -34,6 +38,7 @@ class OpenAIAgent:
         on_message: Optional[Callable[[Message], None]] = None,
         on_tool_use: Optional[Callable[[ToolCall], None]] = None
     ):
+        self.console = Console()
         self.name = name
         self.tools = {tool.name: tool for tool in tools}
         self.conversation_history: List[Message] = []
@@ -64,6 +69,7 @@ class OpenAIAgent:
             self.logger.addHandler(console_handler)
         
         self.logger.debug(f"Agent {name} initialisé avec le modèle {model}")
+        self.console.print(f"[bold green]Agent {name} initialisé avec le modèle {model}[/bold green]")
 
     def _create_tools_description(self) -> List[Dict[str, Any]]:
         """Crée la description des outils pour l'API OpenAI"""
@@ -120,7 +126,9 @@ class OpenAIAgent:
         """Retourne le schéma des outils au format OpenAI"""
         return [tool.get_schema() for tool in self.tools]
 
-    def execute_task(self, task_description: str, max_steps: int = 5):
+    def execute_task(self, task_description: str, max_steps: int = 10):
+        self.console.print(Panel(f"[bold blue]Nouvelle tâche[/bold blue]\n{task_description}"))
+        
         self.logger.debug(f"Démarrage de la tâche: {task_description}")
         
         system_message = Message(
@@ -145,108 +153,137 @@ class OpenAIAgent:
         }
         
         step = 0
-        while step < max_steps:
-            step += 1
-            self.logger.debug(f"Étape {step}/{max_steps}")
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console
+        ) as progress:
+            task = progress.add_task("[cyan]Traitement en cours...", total=max_steps)
             
-            try:
-                api_messages = [
-                    {
-                        "role": msg.role, 
-                        "content": msg.content,
-                        **({"name": msg.name} if msg.name else {}),
-                        **({"tool_call_id": msg.tool_call_id} if msg.tool_call_id else {})
-                    }
-                    for msg in messages
-                ]
+            while step < max_steps:
+                step += 1
+                progress.update(task, advance=1, description=f"[cyan]Étape {step}/{max_steps}")
                 
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=api_messages,
-                    tools=[tool.get_schema() for tool in self.tools.values()],
-                    tool_choice="auto",
-                    temperature=self.temperature
-                )
-
-                assistant_message = response.choices[0].message
-                
-                # Créer un Message à partir de la réponse de l'assistant
-                assistant_msg = Message(
-                    role="assistant",
-                    content=assistant_message.content if assistant_message.content else ""
-                )
-                messages.append(assistant_msg)
-                
-                # Yield assistant's response
-                yield {
-                    'type': 'message',
-                    'data': assistant_msg.__dict__
-                }
-                
-                if assistant_message.tool_calls:
-                    for tool_call in assistant_message.tool_calls:
-                        tool_name = tool_call.function.name
-                        tool_args = json.loads(tool_call.function.arguments)
-                        
-                        # Yield tool call event
-                        yield {
-                            'type': 'tool_call',
-                            'data': {
-                                'tool_name': tool_name,
-                                'parameters': tool_args
-                            }
+                try:
+                    api_messages = [
+                        {
+                            "role": msg.role, 
+                            "content": msg.content,
+                            **({"name": msg.name} if msg.name else {}),
+                            **({"tool_call_id": msg.tool_call_id} if msg.tool_call_id else {})
                         }
+                        for msg in messages
+                    ]
+                    
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=api_messages,
+                        tools=[tool.get_schema() for tool in self.tools.values()],
+                        tool_choice="auto",
+                        temperature=self.temperature
+                    )
 
-                        try:
-                            result = self.tools[tool_name].execute(**tool_args)
+                    assistant_message = response.choices[0].message
+                    
+                    # Créer un Message à partir de la réponse de l'assistant
+                    assistant_msg = Message(
+                        role="assistant",
+                        content=assistant_message.content if assistant_message.content else ""
+                    )
+                    messages.append(assistant_msg)
+                    
+                    # Yield assistant's response
+                    yield {
+                        'type': 'message',
+                        'data': assistant_msg.__dict__
+                    }
+                    
+                    if assistant_message.content:
+                        self.console.print(Panel(
+                            assistant_message.content,
+                            title="[bold purple]Assistant[/bold purple]",
+                            border_style="purple"
+                        ))
+                    
+                    if assistant_message.tool_calls:
+                        for tool_call in assistant_message.tool_calls:
+                            tool_name = tool_call.function.name
+                            tool_args = json.loads(tool_call.function.arguments)
                             
-                            # Convertir le générateur en liste si nécessaire
-                            if hasattr(result, '__iter__') and hasattr(result, '__next__'):
-                                result = list(result)
+                            self.console.print(f"[bold yellow]Utilisation de l'outil[/bold yellow]: {tool_name}")
+                            self.console.print(f"[dim]Paramètres:[/dim] {tool_args}")
                             
-                            # Yield tool result
+                            # Yield tool call event
                             yield {
-                                'type': 'tool_result',
+                                'type': 'tool_call',
                                 'data': {
                                     'tool_name': tool_name,
-                                    'result': result
+                                    'parameters': tool_args
                                 }
                             }
 
-                            if tool_name == "return":
-                                result = result
+                            try:
+                                result = self.tools[tool_name].execute(**tool_args)
+
+                                self.console.print(f"[bold green]Résultat de l'outil {tool_name}:[/bold green]")
+                                self.console.print(Panel(str(result), style="green"))
+                                
+                                """"
+                                # Convertir le générateur en liste si nécessaire
+                                if hasattr(result, '__iter__') and hasattr(result, '__next__'):
+                                    result = list(result)"""
+                                
+                                # Yield tool result
                                 yield {
-                                    'type': 'final_result',
-                                    'data': result["result"]
+                                    'type': 'tool_result',
+                                    'data': {
+                                        'tool_name': tool_name,
+                                        'result': result
+                                    }
                                 }
 
-                            # Créer un Message pour la réponse de l'outil
-                            tool_msg = Message(
-                                role="function",
-                                name=tool_name,
-                                content=json.dumps(result)
-                            )
-                            messages.append(tool_msg)
+                                if tool_name == "return":
+                                    result = result
+                                    yield {
+                                        'type': 'final_result',
+                                        'data': result["result"]
+                                    }
+                                    self.console.print("[bold green]✓ Tâche terminée avec succès![/bold green]")
+                                    step = max_steps # Terminer la boucle
 
-                        except Exception as e:
-                            print(e)
-                            traceback.print_exc()
-                            yield {
-                                'type': 'error',
-                                'data': {
-                                    'message': str(e)
+                                # Créer un Message pour la réponse de l'outil
+                                tool_msg = Message(
+                                    role="function",
+                                    name=tool_name,
+                                    content=json.dumps(result)
+                                )
+                                messages.append(tool_msg)
+
+
+
+                            except Exception as e:
+                                self.console.print(f"[bold red]Erreur lors de l'exécution de l'outil {tool_name}:[/bold red]")
+                                self.console.print(Panel(str(e), style="red"))
+                                print(e)
+                                traceback.print_exc()
+                                yield {
+                                    'type': 'error',
+                                    'data': {
+                                        'message': str(e)
+                                    }
                                 }
-                            }
-                            raise
+                                raise
 
 
-            except Exception as e:
-                print(e)
-                traceback.print_exc()
-                yield {
-                    'type': 'error',
-                    'data': {
-                        'message': str(e)
+                except Exception as e:
+                    self.console.print("[bold red]Erreur générale:[/bold red]")
+                    self.console.print(Panel(str(e), style="red"))
+                    print(e)
+                    traceback.print_exc()
+                    yield {
+                        'type': 'error',
+                        'data': {
+                            'message': str(e)
+                        }
                     }
-                }
-                raise
+                    raise

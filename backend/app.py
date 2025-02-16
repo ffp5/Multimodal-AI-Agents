@@ -17,7 +17,7 @@ CORS(app)
 swagger = Swagger(app, template=template, config=swagger_config)
 
 def create_agent():
-    use_gemini = False
+    use_gemini = True
     return OpenAIAgent(
         name="Road trip planner",
         tools=[
@@ -26,7 +26,7 @@ def create_agent():
             ReturnTool()
         ],
         api_key=os.environ["GEMINI_API_KEY"] if use_gemini else os.environ["API_KEY_OPENAI"],
-        model="gemini-2.0-flash" if use_gemini else "gpt-4o-mini",
+        model="gemini-2.0-flash" if use_gemini else "gpt-4o",
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/" if use_gemini else None
     )
 
@@ -40,7 +40,7 @@ def create_streaming_agent():
             ReturnTool()
         ],
         api_key=os.environ["GEMINI_API_KEY"] if use_gemini else os.environ["API_KEY_OPENAI"],
-        model="gemini-2.0-flash" if use_gemini else "gpt-4o-mini",
+        model="gemini-2.0-flash" if use_gemini else "gpt-4o",
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/" if use_gemini else None
     )
 

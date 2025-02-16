@@ -23,12 +23,6 @@ class HotelToolOpen(BaseTool):
                 param_type=ParameterType.STRING,
                 description="Localisation de l'hôtel, met le nom de la ville et le pays",
                 required=True
-            ),
-            ToolParameter(
-                name="nb_results",
-                param_type=ParameterType.INTEGER,
-                description="Nombre de résultats à renvoyer (par défaut 6)",
-                required=False,
             )
         ]
 
@@ -115,7 +109,6 @@ class HotelToolOpen(BaseTool):
             output = {
                 "hotels": formatted_hotels
             }
-            print(f"Réponse du tool: {output}")
             return output
 
         except ValueError as e:
