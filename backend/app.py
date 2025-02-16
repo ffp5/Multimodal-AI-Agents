@@ -31,7 +31,7 @@ def create_streaming_agent():
         ],
         api_key=os.environ["TOGETHER_API_KEY"] if use_together else os.environ["API_KEY_OPENAI"],
         model="deepseek-ai/DeepSeek-V3" if use_together else "gpt-4o",
-        base_url="https://api.together.xyz/v1/chat/completions" if use_together else None
+        base_url="https://api.together.xyz/v1" if use_together else None
     )
 
 @weave.op()
