@@ -6,6 +6,7 @@ import logging
 from openai import OpenAI
 from backend.tools.base_tool import BaseTool, ToolParameter, ParameterType
 from backend.agents.system_prompt import system_prompt_road_trip_planner
+import traceback
 
 @dataclass
 class Message:
@@ -119,7 +120,7 @@ class OpenAIAgent:
         """Retourne le schéma des outils au format OpenAI"""
         return [tool.get_schema() for tool in self.tools]
 
-    def execute_task(self, task_description: str, max_steps: int = 3):
+    def execute_task(self, task_description: str, max_steps: int = 5):
         self.logger.debug(f"Démarrage de la tâche: {task_description}")
         
         system_message = Message(
@@ -169,13 +170,17 @@ class OpenAIAgent:
 
                 assistant_message = response.choices[0].message
                 
+                # Créer un Message à partir de la réponse de l'assistant
+                assistant_msg = Message(
+                    role="assistant",
+                    content=assistant_message.content if assistant_message.content else ""
+                )
+                messages.append(assistant_msg)
+                
                 # Yield assistant's response
                 yield {
                     'type': 'message',
-                    'data': {
-                        'role': 'assistant',
-                        'content': assistant_message.content
-                    }
+                    'data': assistant_msg.__dict__
                 }
                 
                 if assistant_message.tool_calls:
@@ -195,6 +200,10 @@ class OpenAIAgent:
                         try:
                             result = self.tools[tool_name].execute(**tool_args)
                             
+                            # Convertir le générateur en liste si nécessaire
+                            if hasattr(result, '__iter__') and hasattr(result, '__next__'):
+                                result = list(result)
+                            
                             # Yield tool result
                             yield {
                                 'type': 'tool_result',
@@ -205,16 +214,23 @@ class OpenAIAgent:
                             }
 
                             if tool_name == "return":
-                                return
+                                result = result
+                                yield {
+                                    'type': 'final_result',
+                                    'data': result["result"]
+                                }
 
-                            messages.append({
-                                "role": "function",
-                                "name": tool_name,
-                                "content": json.dumps(result)
-                            })
+                            # Créer un Message pour la réponse de l'outil
+                            tool_msg = Message(
+                                role="function",
+                                name=tool_name,
+                                content=json.dumps(result)
+                            )
+                            messages.append(tool_msg)
 
                         except Exception as e:
-                            # Yield error event
+                            print(e)
+                            traceback.print_exc()
                             yield {
                                 'type': 'error',
                                 'data': {
@@ -223,7 +239,10 @@ class OpenAIAgent:
                             }
                             raise
 
+
             except Exception as e:
+                print(e)
+                traceback.print_exc()
                 yield {
                     'type': 'error',
                     'data': {

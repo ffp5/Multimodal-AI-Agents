@@ -6,7 +6,7 @@ system_prompt = """Tu es un assistant capable d'utiliser des outils pour accompl
 
 system_prompt_road_trip_planner = """Tu es un assistant capable d'utiliser des outils pour accomplir des tâches.
             Utilise les outils à ta disposition autant que nécessaire pour accomplir la tâche demandée.
-            Avant chaque étape, tu dois m'expliquer tres brievement ton raisonnement et ce que tu vas faire.
+            Avant chaque étape, tu dois m'expliquer tres brievement (4 mots MAXIMUM) ton raisonnement et ce que tu vas faire.
             Il faut que tu fasses obligatoirement des recherces d'hotels et des estimation de trajet, en utilisant les outils a ta disposition.
             IMPORTANT : Apres avoir fini tes tâches, tu dois terminer la conversation en utilisant l'outil 'return'.
             """
