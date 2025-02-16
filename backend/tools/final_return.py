@@ -1,5 +1,5 @@
 from backend.tools.base_tool import BaseTool, ToolParameter, ParameterType
-from backend.agents.system_prompt import dict_output
+from backend.agents.system_prompt import return_instructions
 from backend.utils.convert_osm_to_maps import convert_osm_to_maps
 import json
 
@@ -8,7 +8,7 @@ class ReturnTool(BaseTool):
     def __init__(self):
         super().__init__(
             name="return",
-            description="Outil pour terminer la conversation, et renvoyer tes résultats",
+            description="Tool to end the conversation and return your results",
         )
 
     def _define_parameters(self):
@@ -16,7 +16,7 @@ class ReturnTool(BaseTool):
             ToolParameter(
                 name="result",
                 param_type=ParameterType.STRING,
-                description="Retourne les infromations sous ce format Quand tu ne sais pas, met un None:\n\n" + json_output,
+                description="Return the information in this JSON format by following this format:\n\n" + return_instructions,
                 required=True,
             )
         ]
@@ -34,7 +34,9 @@ class ReturnTool(BaseTool):
                 pass
         
         except Exception as e:
-            raise ValueError(f"Erreur lors de la conversion de la réponse en JSON : {e}")
+            return {
+                "error": f"Erreur lors de la conversion en JSON: {e}",
+            }
 
         return {
             "result": result_json,

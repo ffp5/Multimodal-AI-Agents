@@ -4,7 +4,8 @@ import requests
 import time
 from math import cos, radians
 from dotenv import load_dotenv
-
+import os
+from google_images_search import GoogleImagesSearch
 # Chargement des variables d'environnement
 load_dotenv()
 
@@ -23,6 +24,12 @@ class HotelToolOpen(BaseTool):
                 param_type=ParameterType.STRING,
                 description="Localisation de l'hôtel, met le nom de la ville et le pays",
                 required=True
+            ),
+            ToolParameter(
+                name="nb_results",
+                param_type=ParameterType.INTEGER,
+                description="Nombre de résultats à renvoyer (par défaut 6)",
+                required=False,
             )
         ]
 
@@ -84,6 +91,28 @@ class HotelToolOpen(BaseTool):
         response.raise_for_status()
         return response.json()
 
+    def get_image_url(self,query: str) -> str:
+        gis = GoogleImagesSearch(os.getenv("GOOGLE_API_KEY"), os.getenv("CUSTOM_SEARCH_ENGINE_ID"))
+
+        _search_params = {
+            'q': query,
+            'num': 1,
+            'fileType': 'jpg',  # Choose one: 'jpg' or 'png'
+            'rights': 'cc_publicdomain',  # Choose one rights option
+            'safe': 'high',  # Choose one safety level
+            'imgType': 'photo'  # Choose one image type
+        }
+
+
+        # this will only search for images:
+        gis.search(search_params=_search_params)
+
+        try:
+            return gis.results()[0].url
+        except:
+            print(gis.results())
+            return ""
+
     def execute(self, **kwargs) -> Dict[str, Any]:
         try:
             location = kwargs["location"]
@@ -95,25 +124,36 @@ class HotelToolOpen(BaseTool):
             
             # Rechercher les hôtels dans la zone délimitée
             hotels_data = self._search_hotels(latitude, longitude, nb_results)
-            
+
+
             # Formater les résultats
             formatted_hotels = []
             for hotel in hotels_data:
+                if hotel.get('display_name', '').split(',') == '':
+                    continue
+                place = hotel.get('display_name', '').split(',')[0]
+                url_image = self.get_image_url(place)
                 osm_id = hotel.get('osm_id', '')
                 formatted_hotels.append({
-                    "name": hotel.get('display_name', '').split(',')[0],  # On récupère la première partie comme nom
+                    "name": hotel.get('display_name', '').split(',')[0],
                     "address": hotel.get('display_name', ''),
-                    "maps_link": f"https://www.openstreetmap.org/way/{osm_id}"
+                    "maps_link": f"https://www.openstreetmap.org/way/{osm_id}",
+                    "image_link": url_image
                 })
 
             output = {
                 "hotels": formatted_hotels
             }
+            print(f"Tool response: {output}")
             return output
 
         except ValueError as e:
-            return {"error": f"Erreur: {str(e)}"}
+            import traceback
+            traceback.print_exc()
+            return {"error": f"Error: {str(e)}"}
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return {"error": str(e)}
 
 if __name__ == "__main__":
@@ -123,8 +163,9 @@ if __name__ == "__main__":
     # Définition des paramètres
     params = {
         "location": "Paris",
-        "nb_results": 3
+        "nb_results": 1
     }
 
     # Appel de la méthode execute avec les paramètres
     result = hotel_tool.execute(**params)
+    print(result)

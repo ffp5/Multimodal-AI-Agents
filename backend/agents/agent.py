@@ -68,8 +68,8 @@ class OpenAIAgent:
             console_handler.setFormatter(formatter)
             self.logger.addHandler(console_handler)
         
-        self.logger.debug(f"Agent {name} initialisé avec le modèle {model}")
-        self.console.print(f"[bold green]Agent {name} initialisé avec le modèle {model}[/bold green]")
+        self.logger.debug(f"Agent {name} initialized with model {model}")
+        self.console.print(f"[bold green]Agent {name} initialized with model {model}[/bold green]")
 
     def _create_tools_description(self) -> List[Dict[str, Any]]:
         """Crée la description des outils pour l'API OpenAI"""
@@ -127,9 +127,9 @@ class OpenAIAgent:
         return [tool.get_schema() for tool in self.tools]
 
     def execute_task(self, task_description: str, max_steps: int = 10):
-        self.console.print(Panel(f"[bold blue]Nouvelle tâche[/bold blue]\n{task_description}"))
+        self.console.print(Panel(f"[bold blue]New Task[/bold blue]\n{task_description}"))
         
-        self.logger.debug(f"Démarrage de la tâche: {task_description}")
+        self.logger.debug(f"Starting task: {task_description}")
         
         system_message = Message(
             role="system",
@@ -158,11 +158,11 @@ class OpenAIAgent:
             TextColumn("[progress.description]{task.description}"),
             console=self.console
         ) as progress:
-            task = progress.add_task("[cyan]Traitement en cours...", total=max_steps)
+            task = progress.add_task("[cyan]Processing...", total=max_steps)
             
             while step < max_steps:
                 step += 1
-                progress.update(task, advance=1, description=f"[cyan]Étape {step}/{max_steps}")
+                progress.update(task, advance=1, description=f"[cyan]Step {step}/{max_steps}")
                 
                 try:
                     api_messages = [
@@ -210,8 +210,8 @@ class OpenAIAgent:
                             tool_name = tool_call.function.name
                             tool_args = json.loads(tool_call.function.arguments)
                             
-                            self.console.print(f"[bold yellow]Utilisation de l'outil[/bold yellow]: {tool_name}")
-                            self.console.print(f"[dim]Paramètres:[/dim] {tool_args}")
+                            self.console.print(f"[bold yellow]Using tool[/bold yellow]: {tool_name}")
+                            self.console.print(f"[dim]Parameters:[/dim] {tool_args}")
                             
                             # Yield tool call event
                             yield {
@@ -225,7 +225,7 @@ class OpenAIAgent:
                             try:
                                 result = self.tools[tool_name].execute(**tool_args)
 
-                                self.console.print(f"[bold green]Résultat de l'outil {tool_name}:[/bold green]")
+                                self.console.print(f"[bold green]Tool result for {tool_name}:[/bold green]")
                                 self.console.print(Panel(str(result), style="green"))
                                 
                                 """"
@@ -242,13 +242,13 @@ class OpenAIAgent:
                                     }
                                 }
 
-                                if tool_name == "return":
+                                if tool_name == "return" and "result" in result:
                                     result = result
                                     yield {
                                         'type': 'final_result',
                                         'data': result["result"]
                                     }
-                                    self.console.print("[bold green]✓ Tâche terminée avec succès![/bold green]")
+                                    self.console.print("[bold green]✓ Task completed successfully![/bold green]")
                                     step = max_steps # Terminer la boucle
 
                                 # Créer un Message pour la réponse de l'outil
@@ -262,7 +262,7 @@ class OpenAIAgent:
 
 
                             except Exception as e:
-                                self.console.print(f"[bold red]Erreur lors de l'exécution de l'outil {tool_name}:[/bold red]")
+                                self.console.print(f"[bold red]Error while executing tool {tool_name}:[/bold red]")
                                 self.console.print(Panel(str(e), style="red"))
                                 print(e)
                                 traceback.print_exc()
@@ -276,7 +276,7 @@ class OpenAIAgent:
 
 
                 except Exception as e:
-                    self.console.print("[bold red]Erreur générale:[/bold red]")
+                    self.console.print("[bold red]General error:[/bold red]")
                     self.console.print(Panel(str(e), style="red"))
                     print(e)
                     traceback.print_exc()

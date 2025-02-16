@@ -30,7 +30,7 @@ def on_message(message):
     print(f"{color}[{message.role}]: {message.content}{Style.RESET_ALL}")
 
 def on_tool_use(tool_call):
-    print(f"{Fore.CYAN}Utilisation de l'outil: {tool_call.tool_name} avec les arguments {tool_call.parameters}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Using tool: {tool_call.tool_name} with arguments {tool_call.parameters}{Style.RESET_ALL}")
 
 # Initialisation de l'agent
 agent = OpenAIAgent(

@@ -16,19 +16,7 @@ app = Flask(__name__)
 CORS(app)
 swagger = Swagger(app, template=template, config=swagger_config)
 
-def create_agent():
-    use_gemini = True
-    return OpenAIAgent(
-        name="Road trip planner",
-        tools=[
-            HotelToolOpen(),
-            OpenStreetMapTool(),
-            ReturnTool()
-        ],
-        api_key=os.environ["GEMINI_API_KEY"] if use_gemini else os.environ["API_KEY_OPENAI"],
-        model="gemini-2.0-flash" if use_gemini else "gpt-4o",
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/" if use_gemini else None
-    )
+
 
 def create_streaming_agent():
     use_gemini = False
@@ -53,62 +41,6 @@ def home():
         description: Message de bienvenue
     """
     return jsonify({'message': 'Bienvenue sur l\'API de planification de road trip'}), 200
-
-@app.route('/plan-trip', methods=['POST'])
-def plan_trip():
-    """Planifie un road trip avec des étapes et des hôtels
-    ---
-    parameters:
-      - name: body
-        in: body
-        required: true
-        schema:
-          type: object
-          required:
-            - start_location
-            - end_location
-            - duration
-          properties:
-            start_location:
-              type: string
-              description: Ville de départ
-            end_location:
-              type: string
-              description: Ville d'arrivée
-            duration:
-              type: integer
-              description: Durée du voyage en jours
-    responses:
-      200:
-        description: Plan de voyage généré avec succès
-      400:
-        description: Paramètres manquants ou invalides
-      500:
-        description: Erreur serveur
-    """
-    data = request.get_json()
-    
-    # Validation des paramètres requis
-    required_params = ['start_location', 'end_location', 'duration']
-    if not all(param in data for param in required_params):
-        return jsonify({
-            'error': 'Missing required parameters. Please provide start_location, end_location, and duration'
-        }), 400
-    
-    try:
-        duration = int(data['duration'])
-    except ValueError:
-        return jsonify({'error': 'Duration must be a number'}), 400
-
-    # Création de l'agent et exécution de la tâche
-    agent = create_agent()
-    prompt = f"Planifier un road trip de {duration} jours en France, en partant de {data['start_location']} pour aller à {data['end_location']}. Trouve des hôtels pour chaque étape."
-    
-    try:
-        result = agent.execute_task(prompt)
-        return jsonify({'result': result})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/plan-trip-stream', methods=['POST'])
 def plan_trip_stream():
@@ -156,7 +88,8 @@ def plan_trip_stream():
 
     def generate():
         agent = create_streaming_agent()
-        prompt = f"Planifier un road trip de {duration} jours en France, en partant de {data['start_location']} pour aller à {data['end_location']}. Trouve des hôtels pour chaque étape."
+        prompt = f"Plan a {duration} day road trip from {data['start_location']} to {data['end_location']}. Find hotels for each stop."
+
         
         try:
             for event in agent.execute_task(prompt):
