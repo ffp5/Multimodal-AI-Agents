@@ -123,7 +123,7 @@ if __name__ == "__main__":
     # Définition des paramètres
     params = {
         "location": "Paris",
-        "nb_results": 10
+        "nb_results": 3
     }
 
     # Appel de la méthode execute avec les paramètres

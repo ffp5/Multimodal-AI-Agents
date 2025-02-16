@@ -3,127 +3,107 @@ from typing import List, Dict, Any
 import requests
 import json
 import os
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-class CarRentalTool(BaseTool):
+class CarHireSearchTool(BaseTool):
     def __init__(self):
         super().__init__(
-            name="car rental searcher",
-            description="Search for car rental locations in a specified area"
+            name="car hire searcher",
+            description="Search for car hire locations using Skyscanner API"
         )
+        self.api_key = os.getenv('SKYSCANNER_API_KEY')
+        self.base_url = "https://partners.api.skyscanner.net/apiservices/v3"
 
     def _define_parameters(self) -> List[ToolParameter]:
         return [
             ToolParameter(
-                name="location",
+                name="search_term",
                 param_type=ParameterType.STRING,
-                description="Location to search for car rentals",
+                description="Location to search for car hire (e.g., 'Paris')",
                 required=True
             ),
             ToolParameter(
-                name="nb_results",
-                param_type=ParameterType.INTEGER,
-                description="Number of results to return",
+                name="market",
+                param_type=ParameterType.STRING,
+                description="Market where search is coming from (e.g., 'UK')",
                 required=False,
-                default=5
+                default="UK"
+            ),
+            ToolParameter(
+                name="locale",
+                param_type=ParameterType.STRING,
+                description="Language for the search (ISO locale)",
+                required=False,
+                default="en-GB"
             )
         ]
 
+    def _get_location_suggestions(self, search_term: str, market: str, locale: str) -> Dict[str, Any]:
+        url = f"{self.base_url}/autosuggest/carhire"
+        headers = {
+            "api-key": self.api_key,
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "query": {
+                "market": market,
+                "locale": locale,
+                "searchTerm": search_term
+            }
+        }
+
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.json()
+
     def execute(self, **kwargs) -> Dict[str, Any]:
         try:
-            location = kwargs["location"]
-            nb_results = int(kwargs.get("nb_results", 5))
-            
-            # Get location coordinates
-            url = "https://places.googleapis.com/v1/places:searchText"
-            payload = {
-                "textQuery": location,
-                "maxResultCount": 1
-            }
-            headers = {
-                "Content-Type": "application/json",
-                "X-Goog-Api-Key": os.getenv('GOOGLE_API_KEY'),
-                "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location"
-            }
-            
-            response = requests.post(url, headers=headers, data=json.dumps(payload))
-            response.raise_for_status()
-            location_data = response.json()
+            search_term = kwargs["search_term"]
+            market = kwargs.get("market", "UK")
+            locale = kwargs.get("locale", "en-GB")
 
-            if not location_data.get('places'):
-                return {"error": "No location found"}
+            suggestions = self._get_location_suggestions(search_term, market, locale)
             
-            latitude = location_data['places'][0]['location']['latitude']
-            longitude = location_data['places'][0]['location']['longitude']
-
-            # Search for car rental locations
-            url = "https://places.googleapis.com/v1/places:searchNearby"
-            payload = {
-                "includedTypes": ["car_rental"],
-                "maxResultCount": nb_results,
-                "locationRestriction": {
-                    "circle": {
-                        "center": {"latitude": latitude, "longitude": longitude},
-                        "radius": 50000.0  # 50km radius
-                    }
+            # Format the response
+            formatted_locations = []
+            for place in suggestions.get('places', []):
+                location_info = {
+                    "name": place['name'],
+                    "type": place['type'],
+                    "coordinates": place.get('location', ''),
+                    "hierarchy": place.get('hierarchy', ''),
+                    "entity_id": place['entityId']
                 }
-            }
-            headers = {
-                "Content-Type": "application/json",
-                "X-Goog-Api-Key": os.getenv('GOOGLE_API_KEY'),
-                "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.id,places.rating,places.phoneNumber,places.websiteUri,places.currentOpeningHours"
-            }
-
-            response = requests.post(url, headers=headers, data=json.dumps(payload))
-            if response.status_code != 200:
-                error_data = response.json().get('error', {})
-                error_message = error_data.get('message', 'Unknown error')
-                return {"error": f"Car rental search failed: {error_message}"}
-            
-            rental_data = response.json()
-            
-            # Format rental locations with additional information
-            formatted_rentals = []
-            if rental_data.get('places'):
-                for place in rental_data['places']:
-                    rental_info = {
-                        "name": place['displayName']['text'],
-                        "address": place['formattedAddress'],
-                        "maps_link": f"https://www.google.com/maps/place/?q=place_id:{place['id']}",
-                        "rating": place.get('rating', 'Not rated'),
-                        "phone": place.get('phoneNumber', 'No phone number available'),
-                        "website": place.get('websiteUri', 'No website available')
-                    }
-                    
-                    # Add opening hours if available
-                    if 'currentOpeningHours' in place:
-                        rental_info['hours'] = place['currentOpeningHours'].get('weekdayDescriptions', [])
-                    
-                    formatted_rentals.append(rental_info)
+                formatted_locations.append(location_info)
 
             return {
-                "result": f"Found {len(formatted_rentals)} car rental locations near {location}",
-                "rentals": formatted_rentals
+                "result": f"Found {len(formatted_locations)} car hire locations matching '{search_term}'",
+                "market": market,
+                "locale": locale,
+                "locations": formatted_locations
             }
 
         except Exception as e:
             return {"error": f"An error occurred: {str(e)}"}
 
 if __name__ == "__main__":
-    # Create an instance of the CarRentalTool
-    rental_tool = CarRentalTool()
+    # Create an instance of the CarHireSearchTool
+    car_tool = CarHireSearchTool()
 
-    # Define the parameters
+    # Test parameters
     params = {
-        "location": "Paris",
-        "nb_results": 5
+        "search_term": "London",
+        "market": "UK",
+        "locale": "en-GB"
     }
 
     # Call the execute method with the parameters
-    result = rental_tool.execute(**params)
+    result = car_tool.execute(**params)
 
     # Print the result
     print(json.dumps(result, indent=2))
