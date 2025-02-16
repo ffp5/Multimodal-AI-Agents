@@ -21,7 +21,7 @@ weave.init("roadtrip-planner")
 
 @weave.op()
 def create_streaming_agent():
-    use_gemini = False
+    use_together = True
     return OpenAIAgent(
         name="Road trip planner",
         tools=[
@@ -29,9 +29,9 @@ def create_streaming_agent():
             OpenStreetMapTool(),
             ReturnTool()
         ],
-        api_key=os.environ["GEMINI_API_KEY"] if use_gemini else os.environ["API_KEY_OPENAI"],
-        model="gemini-2.0-flash" if use_gemini else "gpt-4o",
-        base_url="https://generativelanguage.googleapis.com/v1beta/openai/" if use_gemini else None
+        api_key=os.environ["TOGETHER_API_KEY"] if use_together else os.environ["API_KEY_OPENAI"],
+        model="deepseek-ai/DeepSeek-V3" if use_together else "gpt-4o",
+        base_url="https://api.together.xyz/v1/chat/completions" if use_together else None
     )
 
 @weave.op()
